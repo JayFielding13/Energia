@@ -21,11 +21,11 @@ def generate_launch_description():
     urdf_file = os.path.join(pkg_share, 'urdf', 'energia_rover_gazebo.xacro')
     gazebo_pkg_share = get_package_share_directory('gazebo_ros')
 
-    # RViz config - use the one we created in the project root
-    rviz_config_file = os.path.expanduser('~/Desktop/Mini Rover Development/Jetson Cube Orange Outdoor Rover/rover_sensors.rviz')
+    # RViz config - use the one in the package config folder
+    rviz_config_file = os.path.join(pkg_share, 'config', 'rover_visualization.rviz')
 
     # Xbox controller config
-    xbox_config_file = os.path.expanduser('~/Desktop/Mini Rover Development/Jetson Cube Orange Outdoor Rover/xbox_rover.config.yaml')
+    xbox_config_file = os.path.join(pkg_share, 'config', 'xbox_controller.yaml')
 
     # Launch configuration variables
     use_sim_time = LaunchConfiguration('use_sim_time')

@@ -15,7 +15,7 @@ Then dive into:
 
 ```
 simulation/
-├── ros2_ws/src/energia_sim/   # ROS2 simulation package
+├── ros2_ws/src/jetson_rover_sim/   # ROS2 simulation package
 │   ├── urdf/                        # Robot URDF models
 │   ├── launch/                      # Launch files
 │   ├── worlds/                      # Gazebo world files
@@ -48,26 +48,26 @@ source install/setup.bash
 
 **Full simulation with Gazebo + RViz:**
 ```bash
-ros2 launch energia_sim full_simulation.launch.py
+ros2 launch jetson_rover_sim full_simulation.launch.py
 ```
 
 **View robot model only (no physics):**
 ```bash
-ros2 launch energia_sim view_rover.launch.py
+ros2 launch jetson_rover_sim view_rover.launch.py
 ```
 
 **Spawn in Gazebo:**
 ```bash
-ros2 launch energia_sim spawn_rover.launch.py
+ros2 launch jetson_rover_sim spawn_rover.launch.py
 ```
 
 ## Simulated Sensors
 
 - RPLidar A1 (360 degree 2D laser scan)
-- Logitech C920X Camera
-- SparkFun ZED-F9R RTK GPS with dead reckoning
-- SparkFun ZED-F9R integrated IMU (accelerometer, gyroscope, magnetometer)
-- 6x Ultrasonic sensors (AJ-SR04M)
+- USB Camera
+- HERE 3+ RTK GPS
+- 6x Ultrasonic sensors
+- IMU
 
 ## Requirements
 

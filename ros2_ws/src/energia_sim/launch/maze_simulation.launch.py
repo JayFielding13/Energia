@@ -43,10 +43,8 @@ def generate_launch_description():
     # Maze world file
     world_path = os.path.join(pkg_share, 'worlds', 'maze.world')
 
-    # RViz config - use the one in the package if available, fallback to project root
+    # RViz config - use the one in the package config folder
     rviz_config_file = os.path.join(pkg_share, 'config', 'rover_visualization.rviz')
-    if not os.path.exists(rviz_config_file):
-        rviz_config_file = os.path.expanduser('~/Desktop/Mini Rover Development/Jetson Cube Orange Outdoor Rover/rover_sensors.rviz')
 
     # Set Gazebo model path to include our custom models
     models_path = os.path.join(pkg_share, 'models')

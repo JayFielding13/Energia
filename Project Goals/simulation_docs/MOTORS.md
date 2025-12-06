@@ -1,8 +1,8 @@
-# Energia Rover Motor & Drive System
+# Jetson Rover Motor & Drive System
 
 ## Overview
 
-The Energia rover uses a **4-wheel drive (4WD) skid-steer** configuration powered by wheelchair motors, with direct Jetson-to-hardware control via CAN bus.
+The Jetson Cube Orange rover uses a **4-wheel drive (4WD) skid-steer** configuration powered by wheelchair motors.
 
 ## Motor Configuration
 
@@ -57,58 +57,35 @@ MDDS30 Driver #2 (Rear Wheels)
 ### Drive Train Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Control System                            │
-│                                                              │
-│  ┌────────────────────┐     ┌────────────────────┐          │
-│  │  Jetson Orin Nano  │     │   STM32 Nucleo     │          │
-│  │  (Main Computer)   │     │   (Motor Control)   │          │
-│  │  - ROS2 nodes      │     │  - CAN receiver     │          │
-│  │  - /cmd_vel input  │     │  - PWM generation   │          │
-│  └─────────┬──────────┘     └──────────┬─────────┘          │
-│            │                           │                     │
-│      USB-to-CAN               CAN Bus  │                     │
-│            │                           │                     │
-│            └─────────────┬─────────────┘                     │
-│                          │                                   │
-│              ┌───────────┴───────────┐                       │
-│              │      CAN Messages     │                       │
-│              │   (Throttle/Steering) │                       │
-│              └───────────┬───────────┘                       │
-│                          │                                   │
-│         ┌────────────────┴────────────────┐                 │
-│         │                                 │                  │
-│         ▼                                 ▼                  │
-│  ┌────────────┐                    ┌────────────┐           │
-│  │  MDDS30 #1 │                    │  MDDS30 #2 │           │
-│  │   (Front)  │                    │   (Rear)   │           │
-│  │ Mixed R/C  │                    │ Mixed R/C  │           │
-│  └─┬────────┬─┘                    └─┬────────┬─┘           │
-│    │        │                        │        │              │
-│    ▼        ▼                        ▼        ▼              │
-│ ┌───┐    ┌───┐                    ┌───┐    ┌───┐            │
-│ │ FL│    │ FR│                    │ RL│    │ RR│            │
-│ │Mtr│    │Mtr│                    │Mtr│    │Mtr│            │
-│ └─┬─┘    └─┬─┘                    └─┬─┘    └─┬─┘            │
-│   │        │                        │        │               │
-│   ▼        ▼                        ▼        ▼               │
-│ Wheel    Wheel                    Wheel    Wheel             │
-│ (10")    (10")                    (10")    (10")             │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│              Control System                      │
+│  ┌──────────────────────────────────────┐       │
+│  │    Cube Orange (Flight Controller)   │       │
+│  │    - Receives navigation commands    │       │
+│  │    - Outputs motor control signals   │       │
+│  └──────────┬────────────┬──────────────┘       │
+│             │            │                       │
+│       PWM   │            │   PWM                 │
+│             ▼            ▼                       │
+│    ┌────────────┐  ┌────────────┐              │
+│    │  MDDS30 #1 │  │  MDDS30 #2 │              │
+│    │   (Front)  │  │   (Rear)   │              │
+│    └─┬────────┬─┘  └─┬────────┬─┘              │
+│      │        │      │        │                 │
+│      ▼        ▼      ▼        ▼                 │
+│   ┌───┐    ┌───┐  ┌───┐    ┌───┐              │
+│   │ FL│    │ FR│  │ RL│    │ RR│              │
+│   │Mtr│    │Mtr│  │Mtr│    │Mtr│              │
+│   └─┬─┘    └─┬─┘  └─┬─┘    └─┬─┘              │
+│     │        │      │        │                 │
+│     ▼        ▼      ▼        ▼                 │
+│   Wheel    Wheel  Wheel    Wheel               │
+│   (10")    (10")  (10")    (10")               │
+└─────────────────────────────────────────────────┘
 
 FL = Front Left, FR = Front Right
 RL = Rear Left, RR = Rear Right
 ```
-
-### Motor Control Signal Flow
-
-1. **Jetson Orin Nano** receives `/cmd_vel` commands from ROS2 nodes
-2. **USB-to-CAN adapter** converts commands to CAN bus messages
-3. **STM32 Nucleo** receives CAN messages and generates PWM signals
-4. **MDDS30 drivers** in Mixed R/C mode receive:
-   - Channel 1 (D6): Throttle (forward/backward)
-   - Channel 2 (D5): Steering (differential turning)
-5. PWM values: 1500 = stopped, 1700 = full forward, 1300 = full backward
 
 ## Physical Specifications
 
@@ -333,7 +310,7 @@ For 24V system with typical capacity:
 
 ### Gazebo Configuration
 
-From `energia_rover_gazebo.xacro`:
+From `jetson_rover_gazebo.xacro`:
 
 ```xml
 <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
@@ -359,7 +336,7 @@ From `energia_rover_gazebo.xacro`:
 
 ### Tuning for Real Hardware
 
-When you get exact motor specs, update these parameters in `energia_rover.urdf.xacro`:
+When you get exact motor specs, update these parameters in `jetson_rover.urdf.xacro`:
 
 ```xml
 <!-- Update these with actual values -->
@@ -367,7 +344,7 @@ When you get exact motor specs, update these parameters in `energia_rover.urdf.x
 <xacro:property name="wheel_mass" value="4.5"/>     <!-- Weigh motor + wheel -->
 ```
 
-And in `energia_rover_gazebo.xacro`:
+And in `jetson_rover_gazebo.xacro`:
 
 ```xml
 <!-- Match to real motor performance -->
@@ -422,40 +399,26 @@ And in `energia_rover_gazebo.xacro`:
 
 ## Motor Driver Pinout (MDDS30)
 
-### Connections (Mixed R/C Mode)
-
-The MDDS30 drivers operate in **Mixed R/C mode** for simplified control:
+### Connections (Typical)
 
 ```
-STM32 Nucleo → MDDS30 Drivers:
+MDDS30 Driver #1 (Front Wheels):
+  PWM1  → Cube Orange PWM output (left front)
+  PWM2  → Cube Orange PWM output (right front)
+  GND   → Common ground
+  VCC   → 5V logic supply
+  V+    → Battery + (24V)
+  M1+/- → Front left motor
+  M2+/- → Front right motor
 
-MDDS30 Driver #1 (Front Wheels) - Mixed R/C Mode:
-  D6 (PWM)  → IN1 (Throttle channel)
-  D5 (PWM)  → IN2 (Steering channel)
-  GND       → Common ground
-  V+        → Battery + (24V)
-  M1+/-     → Front left motor
-  M2+/-     → Front right motor
-
-MDDS30 Driver #2 (Rear Wheels) - Mixed R/C Mode:
-  D6 (PWM)  → IN1 (Throttle channel) [parallel with Driver #1]
-  D5 (PWM)  → IN2 (Steering channel) [parallel with Driver #1]
-  GND       → Common ground
-  V+        → Battery + (24V)
-  M1+/-     → Rear left motor
-  M2+/-     → Rear right motor
-```
-
-### CAN Bus Connection
-
-```
-Jetson Orin Nano:
-  USB Port  → USB-to-CAN Adapter
-
-USB-to-CAN Adapter:
-  CAN_H     → STM32 CAN transceiver CAN_H
-  CAN_L     → STM32 CAN transceiver CAN_L
-  GND       → Common ground
+MDDS30 Driver #2 (Rear Wheels):
+  PWM1  → Cube Orange PWM output (left rear)
+  PWM2  → Cube Orange PWM output (right rear)
+  GND   → Common ground
+  VCC   → 5V logic supply
+  V+    → Battery + (24V)
+  M1+/- → Rear left motor
+  M2+/- → Rear right motor
 ```
 
 ## References
@@ -467,6 +430,5 @@ USB-to-CAN Adapter:
 ---
 
 **Created:** November 8, 2025
-**Updated:** December 2025 - Migrated to Jetson → CAN → STM32 architecture
 **Status:** Simulation configured with estimated parameters
-**Next Step:** Complete STM32 firmware and test CAN bus communication
+**Next Step:** Measure actual motor specs and update simulation for accuracy

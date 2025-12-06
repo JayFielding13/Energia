@@ -1,4 +1,4 @@
-# Energia Rover Bridge - Ground Control Integration
+# Jetson Rover Bridge - Ground Control Integration
 
 HTTP REST API bridge for connecting Mobile RTK Control Module to simulated rover in Gazebo/RViz.
 
@@ -37,9 +37,9 @@ Mobile RTK Control Module (Python/Tkinter)
 ### 1. Terminal 1: Start Gazebo Simulation
 
 ```bash
-cd ~/ros2_ws  # Or your Energia ros2_ws location
+cd ~/Desktop/Mini\ Rover\ Development/ros2_ws
 source install/setup.bash
-ros2 launch energia_sim visualize_rover.launch.py world:=test_yard
+ros2 launch jetson_rover_sim visualize_rover.launch.py world:=test_yard
 ```
 
 This starts:
@@ -50,9 +50,9 @@ This starts:
 ### 2. Terminal 2: Start Ground Control Bridge
 
 ```bash
-cd ~/ros2_ws  # Or your Energia ros2_ws location
+cd ~/Desktop/Mini\ Rover\ Development/ros2_ws
 source install/setup.bash
-ros2 launch energia_bridge ground_control_bridge.launch.py
+ros2 launch jetson_rover_bridge ground_control_bridge.launch.py
 ```
 
 This starts:
@@ -257,14 +257,14 @@ ros2 topic echo /odom
 ## Configuration
 
 ### GPS Origin Coordinates
-Edit [energia_bridge/gps_bridge.py:18-19](energia_bridge/gps_bridge.py#L18-L19):
+Edit [jetson_rover_bridge/gps_bridge.py:18-19](jetson_rover_bridge/gps_bridge.py#L18-L19):
 ```python
 self.origin_lat = 37.7749  # Your location
 self.origin_lon = -122.4194
 ```
 
 ### HTTP Server Port
-Edit [energia_bridge/http_bridge.py:260](energia_bridge/http_bridge.py#L260):
+Edit [jetson_rover_bridge/http_bridge.py:260](jetson_rover_bridge/http_bridge.py#L260):
 ```python
 app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False)
 ```
@@ -284,12 +284,12 @@ For real rover, change to:
 
 1. **Launch Simulation**
    ```bash
-   ros2 launch energia_sim visualize_rover.launch.py world:=test_yard
+   ros2 launch jetson_rover_sim visualize_rover.launch.py world:=test_yard
    ```
 
 2. **Start Bridge**
    ```bash
-   ros2 launch energia_bridge ground_control_bridge.launch.py
+   ros2 launch jetson_rover_bridge ground_control_bridge.launch.py
    ```
 
 3. **Run Ground Control**
@@ -395,60 +395,12 @@ pip3 install flask
 - [ ] Emergency stop works
 - [ ] Rover moves in simulation when commanded
 
-## Autonomous Waypoint Navigation
-
-The bridge now includes autonomous waypoint navigation with obstacle avoidance.
-
-### How It Works
-
-1. **Send Waypoint**: POST to `/api/target` with GPS coordinates
-2. **ARM Rover**: POST to `/api/arm` to enable motors
-3. **Navigation Begins**: Waypoint navigator automatically:
-   - Rotates to face the waypoint
-   - Drives toward the waypoint
-   - Avoids obstacles using VFH algorithm
-   - Stops when within 0.5m of target
-
-### Navigation Status
-
-The `/api/status` endpoint now includes navigation information:
-
-```json
-{
-  "navigation": {
-    "state": "navigating",
-    "target": {"lat": 37.775, "lon": -122.419, "x": 5.2, "y": 3.1},
-    "distance_to_target": 3.5,
-    "heading_error": 12.3,
-    "obstacle_avoidance": {"critical_danger": false, "speed_scale": 1.0}
-  }
-}
-```
-
-### Navigation States
-
-- **idle**: Waiting for waypoint
-- **rotating**: Turning to face waypoint
-- **navigating**: Driving toward waypoint
-- **avoiding**: Steering around obstacle
-- **arrived**: Reached waypoint (auto-returns to idle after 2s)
-- **paused**: Manually paused or GPS lost
-
-### ROS2 Topics for Navigation
-
-| Topic | Type | Direction | Description |
-|-------|------|-----------|-------------|
-| `/waypoint/target` | NavSatFix | HTTP→Nav | GPS waypoint goal |
-| `/navigation/status` | String (JSON) | Nav→HTTP | Navigation status |
-| `/avoidance/safe_direction` | Vector3 | Avoid→Nav | Safe steering angle |
-| `/avoidance/critical_danger` | Bool | Avoid→Nav | Emergency stop flag |
-
 ## Future Enhancements
 
-- [x] GPS waypoint navigation logic (convert lat/lon to local goals)
+- [ ] GPS waypoint navigation logic (convert lat/lon to local goals)
 - [ ] MQTT bridge support (for beacon_prefix topics)
 - [ ] Battery simulation
-- [x] Obstacle detection status
+- [ ] Obstacle detection status
 - [ ] WiFi RSSI simulation
 - [ ] Mission planning interface
 - [ ] Geofence enforcement
@@ -461,4 +413,4 @@ MIT
 
 Developer: Jay
 Development Assistant: Claude Code
-Hardware: Jetson Orin Nano, SparkFun ZED-F9R GPS/IMU, STM32 Motor Controller, Mobile RTK Terminal
+Hardware: Jetson Orin Nano, Cube Orange, Mobile RTK Terminal

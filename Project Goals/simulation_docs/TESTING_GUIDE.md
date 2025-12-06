@@ -1,4 +1,4 @@
-# Energia Rover Simulation Testing Guide
+# Jetson Rover Simulation Testing Guide
 
 ## Overview
 
@@ -7,7 +7,7 @@ This guide covers testing your rover in simulation before deploying to the real 
 - **Autonomous Navigation**: Waypoint following with GPS
 - **Obstacle Avoidance**: LiDAR and ultrasonic sensor fusion
 - **Geofence Logic**: Boundary enforcement
-- **Control Architecture**: Direct Jetson Orin Nano control via CAN bus
+- **Control Architecture**: Jetson Orin Nano + Cube Orange integration
 
 ## Control Architecture
 
@@ -22,25 +22,17 @@ This guide covers testing your rover in simulation before deploying to the real 
 │  - LiDAR processing (SLAM)              │
 │  - Camera vision processing             │
 │  - Geofence enforcement                 │
-│  - WiFi/Tailscale telemetry             │
+│  - WiFi telemetry                       │
 └─────────────┬───────────────────────────┘
-              │ USB
+              │ Serial/UART
               ▼
 ┌─────────────────────────────────────────┐
-│     SparkFun ZED-F9R (GPS/IMU)          │
-│  - RTK GPS with dead reckoning          │
-│  - Integrated 9-axis IMU                │
-│  - USB connection via pyubx2            │
-└─────────────────────────────────────────┘
-
-Jetson Orin Nano
-              │ USB-to-CAN
-              ▼
-┌─────────────────────────────────────────┐
-│        STM32 Nucleo (Motor MCU)         │
-│  - CAN message receiver                 │
-│  - PWM signal generation                │
-│  - Mixed R/C mode control               │
+│         Cube Orange                      │
+│  - Low-level motor control              │
+│  - IMU data acquisition                 │
+│  - GPS data from HERE 3+                │
+│  - Sensor fusion (IMU + GPS)            │
+│  - Sends data to Jetson via MAVROS     │
 └─────────┬───────────────────────────────┘
           │ PWM signals
           ▼
@@ -48,7 +40,6 @@ Jetson Orin Nano
 │    2× MDDS30 Motor Drivers              │
 │  - Driver 1: Front wheels               │
 │  - Driver 2: Rear wheels                │
-│  - Mixed R/C mode (throttle + steering) │
 └─────────┬───────────────────────────────┘
           │
           ▼
@@ -61,8 +52,7 @@ Jetson Orin Nano
 - Your custom ground control software (Python/ROS 2)
 - Processes sensor data from ROS 2 topics
 - Sends velocity commands to `/cmd_vel`
-- GPS/IMU data from ZED-F9R via USB (pyubx2 driver)
-- Motor commands sent via CAN bus to STM32
+- Receives IMU/GPS data from MAVROS (from Cube Orange)
 
 **In Simulation:**
 - All sensors publish to same ROS 2 topics as real hardware
@@ -104,11 +94,11 @@ The test yard simulates a typical residential front yard with:
 ### 1. Launch Simulation with Visualization
 
 ```bash
-cd ~/ros2_ws  # Or your Energia ros2_ws location
+cd ~/Desktop/Mini\ Rover\ Development/ros2_ws
 source install/setup.bash
 
 # Launch rover in test world with RViz2
-ros2 launch energia_sim visualize_rover.launch.py world:=test_yard
+ros2 launch jetson_rover_sim visualize_rover.launch.py world:=test_yard
 ```
 
 This starts:
@@ -121,7 +111,7 @@ This starts:
 In a new terminal:
 
 ```bash
-source ~/ros2_ws/install/setup.bash  # Or your Energia ros2_ws location
+source ~/Desktop/Mini\ Rover\ Development/ros2_ws/install/setup.bash
 
 # Check all topics are publishing
 ros2 topic list
@@ -560,12 +550,11 @@ In RViz2 (already configured):
 After validating in simulation:
 
 1. **Transfer code to real Jetson**: Your ROS 2 nodes should work identically
-2. **Configure ZED-F9R driver**: Set up pyubx2 for GPS/IMU data
-3. **Test CAN bus communication**: Verify STM32 receives motor commands
-4. **Test sensors individually**: Verify each sensor on real hardware
-5. **Start with manual control**: Test motors before autonomous mode
-6. **Begin with small geofence**: Test in safe, controlled area first
-7. **Gradually increase complexity**: Add features as you gain confidence
+2. **Configure MAVROS**: Connect to Cube Orange for IMU/GPS data
+3. **Test sensors individually**: Verify each sensor on real hardware
+4. **Start with manual control**: Test motors before autonomous mode
+5. **Begin with small geofence**: Test in safe, controlled area first
+6. **Gradually increase complexity**: Add features as you gain confidence
 
 ## Safety Reminders
 

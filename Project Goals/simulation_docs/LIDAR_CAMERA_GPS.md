@@ -1,12 +1,12 @@
-# LiDAR, Camera, and GPS/IMU Sensors
+# LiDAR, Camera, and GPS Sensors
 
 ## Overview
 
-The Energia rover features three primary navigation sensors mounted on and inside the electronics box:
+The Jetson Cube Orange rover features three primary navigation sensors mounted on and inside the electronics box:
 
 1. **RP-LIDAR A1** - 360° 2D laser scanner
 2. **Logitech C920X HD Webcam** - Visual camera
-3. **SparkFun ZED-F9R** - RTK GPS with dead reckoning + integrated IMU
+3. **HERE 3+ RTK GPS** - High-precision GPS antenna
 
 ## RP-LIDAR A1
 
@@ -202,33 +202,23 @@ def image_callback(msg):
 self.create_subscription(Image, '/camera/image_raw', image_callback, 10)
 ```
 
-## SparkFun ZED-F9R (GPS/IMU)
+## HERE 3+ RTK GPS
 
 ### Hardware Specifications
 
 | Parameter | Value |
 |-----------|-------|
-| **Model** | SparkFun ZED-F9R RTK Dead Reckoning Kit |
+| **Model** | HEX/ProfiCNC HERE 3+ |
 | **GNSS** | GPS, GLONASS, Galileo, BeiDou |
+| **Channels** | 184 |
 | **Update Rate** | Up to 10 Hz |
 | **Accuracy (Standalone)** | 2.5m CEP |
 | **Accuracy (RTK)** | 0.01m + 1ppm (horizontal) |
 | **Accuracy (RTK Vertical)** | 0.02m + 1ppm |
-| **Dead Reckoning** | Yes - maintains position during GPS dropout |
-| **Integrated IMU** | 3-axis accelerometer, gyroscope, magnetometer |
-| **Interface** | USB (UBX protocol via pyubx2) |
 | **Time to First Fix** | ~29s (cold start) |
-| **Weight** | ~30g |
-
-### Key Advantages Over Previous GPS
-
-The ZED-F9R replaces the previous Cube Orange + HERE 3+ setup with significant benefits:
-
-1. **Dead Reckoning**: Continues position tracking during brief GPS outages
-2. **Integrated IMU**: No need for separate flight controller for sensor fusion
-3. **Direct USB Connection**: Eliminates MAVLink/MAVROS middleware complexity
-4. **Internal Sensor Fusion**: GPS + IMU combined automatically on-chip
-5. **Simpler Software Stack**: Uses `pyubx2` library for UBX protocol parsing
+| **Compass** | Integrated magnetometer |
+| **Weight** | ~50g |
+| **Dimensions** | ~110mm diameter × 16mm (puck style) |
 
 ### Mounting Position
 
@@ -262,7 +252,6 @@ Cross-Section View (looking from front):
 |-------|--------------|-------------|
 | `/gps/fix` | `sensor_msgs/NavSatFix` | GPS position fix |
 | `/gps/vel` | `geometry_msgs/TwistStamped` | GPS velocity (if available) |
-| `/imu/data` | `sensor_msgs/Imu` | IMU data (accel, gyro, orientation) |
 
 ### NavSatFix Message Format
 
@@ -310,60 +299,24 @@ def gps_callback(msg):
 self.create_subscription(NavSatFix, '/gps/fix', gps_callback, 10)
 ```
 
-## IMU Data (from ZED-F9R)
+## Cube Orange (IMU/Flight Controller)
 
-The ZED-F9R provides integrated IMU data that was previously sourced from the Cube Orange flight controller.
+### Positioning
 
-### IMU Specifications
+- **Location**: Inside electronics box
+- **Position**: 6 inches (0.1524m) directly BELOW RP-LIDAR
+- **Orientation**: IMU arrow facing FORWARD (X+ axis)
+- **Purpose**: Provides IMU data (accelerometer, gyroscope, magnetometer)
 
-| Parameter | Value |
-|-----------|-------|
-| **Accelerometer** | 3-axis, ±16g range |
-| **Gyroscope** | 3-axis, ±2000°/s range |
-| **Magnetometer** | 3-axis compass |
-| **Update Rate** | Up to 100 Hz |
-| **Sensor Fusion** | On-chip fusion with GPS |
+**Offset from electronics_box center:**
+- X: 0 (centered)
+- Y: 0 (centered)
+- Z: `ebox_height/2 - 0.1524` (6 inches below top)
 
-### ROS 2 IMU Message Format
-
-```yaml
-header:
-  frame_id: imu_link
-orientation:
-  x: 0.0
-  y: 0.0
-  z: 0.0
-  w: 1.0
-angular_velocity:
-  x: 0.0  # rad/s
-  y: 0.0
-  z: 0.0
-linear_acceleration:
-  x: 0.0  # m/s²
-  y: 0.0
-  z: 9.81
-```
-
-### Usage Example
-
-```python
-from sensor_msgs.msg import Imu
-
-def imu_callback(msg):
-    # Get orientation (quaternion)
-    orientation = msg.orientation
-
-    # Get angular velocity (rad/s)
-    angular_vel = msg.angular_velocity
-
-    # Get linear acceleration (m/s²)
-    linear_accel = msg.linear_acceleration
-
-    print(f"Angular velocity Z: {angular_vel.z:.3f} rad/s")
-    print(f"Acceleration X: {linear_accel.x:.3f} m/s²")
-
-self.create_subscription(Imu, '/imu/data', imu_callback, 10)
-```
+This positions the Cube Orange:
+- Below the LiDAR for optimal sensor fusion
+- Centered for balanced IMU readings
+- Away from magnetic interference (motors, power distribution)
 
 ## Sensor Layout Summary
 
@@ -372,15 +325,15 @@ Side View (X-Z plane):
                 [LiDAR]
                    ●      ← Top of ebox
               ┌─────────┐
-              │         │
-              │ [ZED-F9R]│  ← GPS/IMU module
+              │    ↓6"  │
+              │  [Cube] │  ← Flight controller
               │    ●    │
               │         │
               │ [Jetson]│  ← Lower section
               └─────────┘
 
 Front View (Y-Z plane):
-    [Camera]  [LiDAR]  [GPS/IMU]
+    [Camera]  [LiDAR]  [GPS]
         ●         ●        ●   ← Top of ebox
     <---4"-->
         ┌──────────────────┐
@@ -400,8 +353,8 @@ The rover's sensors complement each other:
 |--------|-------------|-------|-------------|
 | **LiDAR** | Obstacle detection, mapping | 0.15-12m | 10 Hz |
 | **Camera** | Visual identification, tracking | 0.2m-∞ | 30 Hz |
-| **GPS (ZED-F9R)** | Global positioning | Outdoor only | 10 Hz |
-| **IMU (ZED-F9R)** | Orientation, motion | N/A | 100 Hz |
+| **GPS** | Global positioning | Outdoor only | 10 Hz |
+| **IMU (Cube)** | Orientation, motion | N/A | 50+ Hz |
 | **Ultrasonics** | Close-range obstacles | 0.2-6m | 20 Hz |
 
 ### Typical Applications
@@ -426,9 +379,9 @@ The rover's sensors complement each other:
 ### Launch with All Sensors
 
 ```bash
-cd ~/ros2_ws  # Or your Energia ros2_ws location
+cd ~/Desktop/Mini\ Rover\ Development/ros2_ws
 source install/setup.bash
-ros2 launch energia_sim spawn_rover.launch.py
+ros2 launch jetson_rover_sim spawn_rover.launch.py
 ```
 
 ### Verify All Sensor Topics
@@ -493,11 +446,13 @@ When deploying to actual hardware:
    - Use `usb_cam` or `v4l2_camera` ROS 2 package
    - Configure resolution/framerate in launch file
 
-3. **SparkFun ZED-F9R**: Connected via USB
-   - Uses `pyubx2` library for UBX protocol parsing
-   - Publishes to `/gps/fix` and `/imu/data` topics
-   - RTK corrections via MQTT from base station
-   - No MAVLink/MAVROS middleware required
+3. **HERE 3+**: Connected to Cube Orange via CAN or I2C
+   - GPS data published through MAVROS from Cube Orange
+   - RTK corrections via telemetry link or Wi-Fi
+
+4. **Cube Orange**: Main autopilot
+   - MAVROS publishes IMU, GPS, and other sensor data
+   - Flight controller handles sensor fusion
 
 ### Calibration
 
@@ -505,7 +460,7 @@ Before field deployment:
 
 - [ ] **Camera calibration**: Use `camera_calibration` package
 - [ ] **LiDAR alignment**: Verify 0° angle points forward
-- [ ] **ZED-F9R IMU calibration**: Follow SparkFun calibration procedure
+- [ ] **GPS/IMU fusion**: Configure in ArduPilot parameters
 - [ ] **Coordinate frames**: Verify all TF transforms match physical mounting
 
 ## Troubleshooting
@@ -556,13 +511,11 @@ ros2 run tf2_tools view_frames
 
 - **RP-LIDAR A1 Datasheet**: https://www.slamtec.com/en/Lidar/A1
 - **Logitech C920X Specs**: https://www.logitech.com/en-us/products/webcams/c920x-pro-hd-webcam.html
-- **SparkFun ZED-F9R**: https://www.sparkfun.com/products/16344
-- **pyubx2 Library**: https://github.com/semuconsulting/pyubx2
+- **HERE 3+ Documentation**: https://docs.cubepilot.org/user-guides/here-3
 - **Gazebo ROS 2 Sensors**: https://github.com/ros-simulation/gazebo_ros_pkgs
 
 ---
 
 **Created**: November 8, 2025
-**Updated**: December 2025 - Migrated to SparkFun ZED-F9R GPS/IMU
 **Status**: Simulation configured with all sensors
 **Next Step**: Test sensor fusion and navigation algorithms in simulation

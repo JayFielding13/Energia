@@ -1,4 +1,4 @@
-# Energia Rover Dimensions & Specifications
+# Jetson Rover Dimensions & Specifications
 
 ## Physical Dimensions
 
@@ -15,7 +15,7 @@
 - **Height**: 8 inches (0.2032 m)
 - **Mass**: 5.0 kg (~11 lbs, estimated)
 - **Position**: Centered on top of chassis
-- **Contents**: Jetson Orin Nano, SparkFun ZED-F9R GPS/IMU, STM32 motor controller, MDDS30 motor drivers, power distribution
+- **Contents**: Jetson computer, Cube Orange, MDDS30 motor drivers, power distribution
 - **Color**: Dark gray
 
 ### Wheels
@@ -87,11 +87,9 @@ Side View:
 - **Offset from base_link**: (0, 0, 0.254) m (chassis_height/2 + ebox_height/2)
 - **Total Height Above Ground**: ~20 inches (chassis + electronics box)
 - **Contains**:
-  - Jetson Orin Nano compute module
-  - SparkFun ZED-F9R GPS/IMU module
-  - STM32 Nucleo motor controller
+  - Jetson Orin/Nano compute module
+  - Cube Orange flight controller
   - 2× MDDS30 motor drivers
-  - USB-to-CAN adapter
   - Power distribution board
   - Additional electronics
 
@@ -113,19 +111,20 @@ Side View:
 
 ### Sensors Inside Electronics Box
 
-**SparkFun ZED-F9R GPS/IMU:**
+**HERE 3+ GPS Antenna:**
 - **Position**: Inside box, near top, to the RIGHT of LiDAR
 - **Offset from ebox center**: Near front, -0.08m in Y (right)
-- **Purpose**: RTK GPS positioning + integrated IMU
-- **Interface**: USB (UBX protocol via pyubx2)
-- **Topics**: `/gps/fix` (sensor_msgs/NavSatFix), `/imu/data` (sensor_msgs/Imu)
+- **Purpose**: RTK GPS positioning
+- **Topic**: `/gps/fix` (sensor_msgs/NavSatFix)
 
-**STM32 Nucleo Motor Controller:**
-- **Position**: Inside electronics box, mid-section
-- **Purpose**: CAN bus receiver, PWM generation for MDDS30 drivers
-- **Interface**: CAN bus from Jetson via USB-to-CAN adapter
+**Cube Orange Flight Controller:**
+- **Position**: Inside electronics box, 6 inches BELOW LiDAR
+- **Offset from ebox center**: Centered in X/Y, 0.1524m below top
+- **Orientation**: IMU arrow facing FORWARD (X+ axis)
+- **Size**: ~80mm x 80mm x 40mm
+- **Color**: Blue (in simulation)
 
-**Jetson Orin Nano:**
+**Jetson Compute Module:**
 - **Position**: Inside electronics box, lower section
 - **Offset from ebox center**: Slightly rear, near bottom
 - **Size**: ~100mm x 80mm x 30mm
@@ -210,7 +209,8 @@ Total Width: 23.75 inches
 - [x] Electronics box (12x12x8 inches on top) - **COMPLETED**
 - [x] RP-LIDAR A1 (top of electronics box) - **COMPLETED**
 - [x] Logitech C920X camera (top of ebox, left of LiDAR) - **COMPLETED**
-- [x] SparkFun ZED-F9R GPS/IMU (inside ebox, right of LiDAR) - **COMPLETED**
+- [x] HERE 3+ GPS antenna (inside ebox, right of LiDAR) - **COMPLETED**
+- [x] Cube Orange with IMU (inside ebox, 6" below LiDAR) - **COMPLETED**
 
 ## Future Additions
 
@@ -219,9 +219,5 @@ Planned components to add:
 - [ ] Telemetry antenna mount (on electronics box)
 - [ ] Power distribution board visualization
 - [ ] Motor driver heat sinks
-- [ ] Heltec LoRa killswitch receiver
+- [ ] Emergency stop button
 - [ ] Status LED indicators
-
----
-
-**Updated**: December 2025 - Migrated to SparkFun ZED-F9R GPS/IMU, STM32/CAN motor control

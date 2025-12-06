@@ -1,6 +1,6 @@
 # Developer Onboarding - Rover Simulation
 
-**Welcome to the Jetson Cube Orange Rover Simulation Project!**
+**Welcome to the Energia Rover Simulation Project!**
 
 This document provides a roadmap for new developers (especially those without physical hardware access) to get productive quickly.
 
@@ -51,7 +51,7 @@ This document provides a roadmap for new developers (especially those without ph
 1. 📖 Read [SIMULATION_ROVER_GAPS_ANALYSIS.md](SIMULATION_ROVER_GAPS_ANALYSIS.md)
    - Understand sensor topic compatibility
    - Learn about control architecture differences
-   - Identify missing features (MAVLink, killswitch, etc.)
+   - Identify missing features (killswitch, CAN bus, etc.)
 
 2. 🤔 Plan your project with portability in mind
    - Use ROS2 topics that match real rover
@@ -109,7 +109,7 @@ Read these in order:
 
 1. **Start Simulation**
    ```bash
-   cd ~/rover_simulation/simulation/ros2_ws
+   cd ~/ros2_ws  # Or your Energia ros2_ws location
    source install/setup.bash
    ros2 launch energia_sim full_simulation.launch.py
    ```
@@ -117,7 +117,7 @@ Read these in order:
 2. **Open New Terminal for Your Script**
    ```bash
    source /opt/ros/humble/setup.bash
-   python3 ~/rover_simulation/simulation/examples/my_script.py
+   python3 ~/ros2_ws/examples/my_script.py
    ```
 
 3. **Monitor Topics (Optional)**

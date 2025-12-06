@@ -103,8 +103,15 @@ class WaypointNavigator(Node):
 
         # Obstacle avoidance inputs
         self.steering_adjustment = 0.0  # From avoidance node (radians)
+        self.steering_adjustment_raw = 0.0  # Unfiltered steering adjustment
         self.speed_scale = 1.0          # From avoidance node (0-1)
         self.critical_danger = False    # Emergency stop flag
+        self.rotate_in_place = False    # Skid-steer: rotate without moving forward
+
+        # Smoothing parameters for reducing oscillation
+        self.steering_filter_alpha = 0.3  # Low-pass filter: 0.1=very smooth, 0.5=responsive
+        self.prev_angular_vel = 0.0       # For rate limiting
+        self.max_angular_accel = 0.5      # Max rad/s^2 change per control loop (10Hz)
 
         # Timing
         self.arrived_time = None
@@ -127,6 +134,8 @@ class WaypointNavigator(Node):
             Float32, '/avoidance/speed_scale', self.speed_scale_callback, 10)
         self.danger_sub = self.create_subscription(
             Bool, '/avoidance/critical_danger', self.danger_callback, 10)
+        self.rotate_sub = self.create_subscription(
+            Bool, '/avoidance/rotate_in_place', self.rotate_callback, 10)
 
         # Legacy avoidance interface (for compatibility)
         self.safe_dir_sub = self.create_subscription(
@@ -248,8 +257,13 @@ class WaypointNavigator(Node):
             self.stop()
 
     def steering_adjustment_callback(self, msg: Float32):
-        """Receive steering adjustment from avoidance node"""
-        self.steering_adjustment = msg.data
+        """Receive steering adjustment from avoidance node with low-pass filtering"""
+        self.steering_adjustment_raw = msg.data
+        # Apply low-pass filter: new = alpha * raw + (1-alpha) * old
+        self.steering_adjustment = (
+            self.steering_filter_alpha * self.steering_adjustment_raw +
+            (1.0 - self.steering_filter_alpha) * self.steering_adjustment
+        )
 
     def speed_scale_callback(self, msg: Float32):
         """Receive speed scale from avoidance node"""
@@ -263,12 +277,23 @@ class WaypointNavigator(Node):
         if self.critical_danger and not prev_danger:
             self.get_logger().warn('CRITICAL DANGER - Emergency slowdown!')
 
+    def rotate_callback(self, msg: Bool):
+        """Update rotate-in-place flag from avoidance"""
+        self.rotate_in_place = msg.data
+
     def safe_direction_callback(self, msg: Vector3):
         """Legacy interface - safe_direction now contains steering adjustment"""
         # x = steering adjustment (radians)
         # y = speed scale
-        self.steering_adjustment = msg.x
+        # z = rotate_in_place flag (1.0 = true)
+        self.steering_adjustment_raw = msg.x
+        # Apply low-pass filter: new = alpha * raw + (1-alpha) * old
+        self.steering_adjustment = (
+            self.steering_filter_alpha * self.steering_adjustment_raw +
+            (1.0 - self.steering_filter_alpha) * self.steering_adjustment
+        )
         self.speed_scale = msg.y
+        self.rotate_in_place = (msg.z > 0.5)
 
     # =========================================================================
     # State Machine
@@ -364,6 +389,16 @@ class WaypointNavigator(Node):
         angular_vel = self.angular_kp * adjusted_heading_error
         angular_vel = self.clamp(angular_vel, -self.max_angular, self.max_angular)
 
+        # CRITICAL: When avoidance steering is significant, ensure we're turning hard
+        # The steering_adjustment directly indicates how much we need to turn
+        avoidance_urgency = abs(self.steering_adjustment)
+        if avoidance_urgency > 0.3:  # More than ~17 degrees of steering requested
+            # Ensure angular velocity matches the steering direction and magnitude
+            min_turn_speed = min(self.max_angular * 0.5, avoidance_urgency * 0.8)
+            if abs(angular_vel) < min_turn_speed:
+                # Force minimum turn rate in the steering direction
+                angular_vel = min_turn_speed if self.steering_adjustment > 0 else -min_turn_speed
+
         # Base linear velocity from distance
         linear_vel = self.linear_kp * self.distance_to_target
         linear_vel = self.clamp(linear_vel, 0.0, self.max_linear)
@@ -379,12 +414,26 @@ class WaypointNavigator(Node):
         heading_factor = max(heading_factor, 0.2) if abs(adjusted_heading_error) < math.pi / 2 else heading_factor
         linear_vel *= heading_factor
 
+        # CRITICAL: When avoidance urgency is high, reduce forward speed more aggressively
+        if avoidance_urgency > 0.5:  # More than ~30 degrees steering
+            # Scale down linear speed based on how much steering is needed
+            avoidance_speed_factor = max(0.1, 1.0 - (avoidance_urgency / math.pi))
+            linear_vel *= avoidance_speed_factor
+
         # Apply speed scale from obstacle avoidance
         linear_vel *= self.speed_scale
 
-        # Enforce minimum speed if moving
-        if linear_vel > 0 and linear_vel < self.min_linear:
+        # Enforce minimum speed if moving (but allow 0 when steering hard)
+        if linear_vel > 0 and linear_vel < self.min_linear and avoidance_urgency < 0.5:
             linear_vel = self.min_linear
+
+        # Rate limit angular velocity to prevent sudden direction changes
+        # This smooths out oscillations when switching between avoidance and waypoint tracking
+        angular_delta = angular_vel - self.prev_angular_vel
+        max_delta = self.max_angular_accel  # Per control loop (10Hz = 0.1s)
+        if abs(angular_delta) > max_delta:
+            angular_vel = self.prev_angular_vel + (max_delta if angular_delta > 0 else -max_delta)
+        self.prev_angular_vel = angular_vel
 
         return linear_vel, angular_vel
 
@@ -412,6 +461,15 @@ class WaypointNavigator(Node):
                 linear_vel, angular_vel = self.compute_velocity()
                 cmd.linear.x = self.min_linear * 0.5  # Crawl speed
                 cmd.angular.z = angular_vel
+            elif self.rotate_in_place:
+                # SKID-STEER: Rotate in place to face clear direction
+                # Stop forward motion, just rotate based on steering adjustment
+                cmd.linear.x = 0.0
+                cmd.angular.z = self.angular_kp * self.steering_adjustment
+                cmd.angular.z = self.clamp(cmd.angular.z, -self.max_angular, self.max_angular)
+                # Ensure minimum rotation speed
+                if abs(cmd.angular.z) < 0.3 and abs(self.steering_adjustment) > 0.1:
+                    cmd.angular.z = 0.3 if self.steering_adjustment > 0 else -0.3
             else:
                 linear_vel, angular_vel = self.compute_velocity()
                 cmd.linear.x = linear_vel
@@ -452,7 +510,8 @@ class WaypointNavigator(Node):
             'obstacle_avoidance': {
                 'steering_adjustment': math.degrees(self.steering_adjustment),
                 'speed_scale': self.speed_scale,
-                'critical_danger': self.critical_danger
+                'critical_danger': self.critical_danger,
+                'rotate_in_place': self.rotate_in_place
             }
         }
 

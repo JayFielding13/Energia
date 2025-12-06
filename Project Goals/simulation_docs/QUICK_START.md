@@ -1,4 +1,4 @@
-# Energia Rover Simulation - Quick Start
+# Jetson Rover Simulation - Quick Start
 
 ## Ready to Test!
 
@@ -9,17 +9,17 @@ Your complete rover simulation is ready with all sensors and a test environment.
 ### 1. Basic Simulation (Empty World)
 
 ```bash
-cd ~/ros2_ws  # Or your Energia ros2_ws location
+cd ~/Desktop/Mini\ Rover\ Development/ros2_ws
 source install/setup.bash
-ros2 launch energia_sim spawn_rover.launch.py
+ros2 launch jetson_rover_sim spawn_rover.launch.py
 ```
 
 ### 2. Test World with Obstacles (Recommended)
 
 ```bash
-cd ~/ros2_ws  # Or your Energia ros2_ws location
+cd ~/Desktop/Mini\ Rover\ Development/ros2_ws
 source install/setup.bash
-ros2 launch energia_sim visualize_rover.launch.py world:=test_yard
+ros2 launch jetson_rover_sim visualize_rover.launch.py world:=test_yard
 ```
 
 This launches:
@@ -32,7 +32,7 @@ This launches:
 In a new terminal:
 
 ```bash
-source ~/ros2_ws/install/setup.bash  # Or your Energia ros2_ws location
+source ~/Desktop/Mini\ Rover\ Development/ros2_ws/install/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
@@ -50,7 +50,7 @@ Controls: `i` (forward), `k` (stop), `,` (back), `j` (left), `l` (right)
 ### Sensors
 - **RP-LIDAR A1**: 360° laser scanner (0.15-12m range) → `/scan`
 - **Logitech C920X**: 1080p camera @ 30fps → `/camera/image_raw`
-- **SparkFun ZED-F9R**: RTK GPS with dead reckoning + integrated IMU → `/gps/fix`, `/imu/data`
+- **HERE 3+ GPS**: RTK-capable GPS → `/gps/fix`
 - **6× Ultrasonics**: AJ-SR04M sensors (0.2-6m) → `/ultrasonic/*`
 - **Odometry**: From wheel encoders → `/odom`
 
@@ -158,14 +158,14 @@ When you're ready to deploy to the real rover:
 **Your code works identically** - same ROS 2 topics, same message types!
 
 **On Real Jetson Orin Nano:**
-1. SparkFun ZED-F9R driver → provides `/gps/fix` and `/imu/data` (via USB + pyubx2)
+1. MAVROS connects to Cube Orange → provides `/mavros/imu/data`, `/mavros/global_position/global`
 2. LiDAR driver → publishes to `/scan` (same topic!)
 3. Camera driver → publishes to `/camera/image_raw` (same!)
 4. ESP32 ultrasonic node → publishes to `/ultrasonic/*` (same!)
 
 **Only difference:**
 - Change `use_sim_time:=false` in launch files
-- Motor commands go via CAN bus: `/cmd_vel` → Jetson → CAN → STM32 → MDDS30 motor drivers
+- Cube Orange handles motor PWM (you send `/cmd_vel`, it converts to motor commands)
 
 ## Documentation
 
