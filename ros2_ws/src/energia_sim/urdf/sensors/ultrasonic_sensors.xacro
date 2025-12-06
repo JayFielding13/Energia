@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==================== Ultrasonic Sensor Properties ==================== -->
+
+  <!-- AJ-SR04M Waterproof Ultrasonic Sensor Specifications -->
+  <xacro:property name="ultrasonic_height" value="0.2794"/> <!-- 11 inches from ground -->
+  <xacro:property name="ultrasonic_min_range" value="0.20"/> <!-- 20cm minimum -->
+  <xacro:property name="ultrasonic_max_range" value="6.0"/> <!-- 600cm maximum -->
+  <xacro:property name="ultrasonic_fov" value="1.22"/> <!-- 70° cone = 1.22 radians -->
+  <xacro:property name="ultrasonic_update_rate" value="20"/> <!-- 20 Hz -->
+
+  <!-- ==================== Ultrasonic Sensor Macro ==================== -->
+
+  <xacro:macro name="ultrasonic_sensor" params="name parent x y z yaw">
+
+    <!-- Sensor Link -->
+    <link name="${name}_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.015" length="0.04"/> <!-- Small cylinder to represent sensor -->
+        </geometry>
+        <material name="dark_gray">
+          <color rgba="0.3 0.3 0.3 1"/>
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="0.015" length="0.04"/>
+        </geometry>
+      </collision>
+
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.015"/> <!-- 15 grams -->
+        <inertia
+          ixx="0.000001" ixy="0.0" ixz="0.0"
+          iyy="0.000001" iyz="0.0"
+          izz="0.000001"/>
+      </inertial>
+    </link>
+
+    <!-- Joint connecting sensor to parent -->
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}_link"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 ${yaw}"/>
+    </joint>
+
+    <!-- Gazebo sensor plugin -->
+    <gazebo reference="${name}_link">
+      <sensor name="${name}" type="ray">
+        <always_on>true</always_on>
+        <update_rate>${ultrasonic_update_rate}</update_rate>
+        <visualize>false</visualize>
+
+        <ray>
+          <scan>
+            <!-- Simulate 70° cone with 5 horizontal rays -->
+            <horizontal>
+              <samples>5</samples>
+              <resolution>1</resolution>
+              <min_angle>${-ultrasonic_fov/2}</min_angle>
+              <max_angle>${ultrasonic_fov/2}</max_angle>
+            </horizontal>
+            <!-- Single vertical ray -->
+            <vertical>
+              <samples>1</samples>
+              <resolution>1</resolution>
+              <min_angle>0</min_angle>
+              <max_angle>0</max_angle>
+            </vertical>
+          </scan>
+
+          <range>
+            <min>${ultrasonic_min_range}</min>
+            <max>${ultrasonic_max_range}</max>
+            <resolution>0.01</resolution> <!-- 1cm resolution -->
+          </range>
+
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.01</stddev> <!-- ±1cm accuracy -->
+          </noise>
+        </ray>
+
+        <plugin name="${name}_controller" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <namespace>/ultrasonic</namespace>
+            <remapping>~/out:=${name}</remapping>
+          </ros>
+          <output_type>sensor_msgs/Range</output_type>
+          <frame_name>${name}_link</frame_name>
+          <radiation_type>ultrasound</radiation_type>
+        </plugin>
+      </sensor>
+
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+  </xacro:macro>
+
+  <!-- ==================== 6-Sensor Array Instantiation ==================== -->
+
+  <!--
+    Sensor Layout (Top-Down View):
+
+                        FRONT
+          [Corner L] [Front] [Corner R]
+              45°      0°       45°
+               \       |       /
+                \      |      /
+      [Side L]   \     |     /    [Side R]
+       90°        \    |    /       90°
+                   └───┴───┘
+                      |
+                    [Rear]
+                     180°
+  -->
+
+  <!-- Mounting heights: All sensors at 11 inches (0.2794m) from ground -->
+  <!-- Height calculation: z = -chassis_height/2 + sensor_height_from_ground -->
+  <!--                     z = -0.1524 + 0.2794 = 0.1270 m -->
+  <xacro:property name="sensor_z_offset" value="0.1270"/> <!-- 11 inches from ground -->
+
+  <!-- Sensor mounting positions on chassis edges -->
+  <xacro:property name="front_x" value="${chassis_length/2}"/> <!-- Front edge -->
+  <xacro:property name="rear_x" value="${-chassis_length/2}"/> <!-- Rear edge -->
+  <xacro:property name="side_y" value="${chassis_width/2}"/> <!-- Side edges -->
+
+  <!-- Front Sensor (0° - straight ahead) -->
+  <xacro:ultrasonic_sensor
+    name="front"
+    parent="base_link"
+    x="${front_x}"
+    y="0"
+    z="${sensor_z_offset}"
+    yaw="0"/>
+
+  <!-- Corner Left Sensor (45° outward-left from front) -->
+  <xacro:ultrasonic_sensor
+    name="corner_left"
+    parent="base_link"
+    x="${front_x * 0.8}"
+    y="${side_y * 0.8}"
+    z="${sensor_z_offset}"
+    yaw="${pi/4}"/>
+
+  <!-- Corner Right Sensor (45° outward-right from front) -->
+  <xacro:ultrasonic_sensor
+    name="corner_right"
+    parent="base_link"
+    x="${front_x * 0.8}"
+    y="${-side_y * 0.8}"
+    z="${sensor_z_offset}"
+    yaw="${-pi/4}"/>
+
+  <!-- Side Left Sensor (90° perpendicular left) -->
+  <!-- Positioned 9 inches back from front edge: chassis_length/2 - 9" = 13.5" - 9" = 4.5" = 0.1143m -->
+  <xacro:ultrasonic_sensor
+    name="side_left"
+    parent="base_link"
+    x="0.1143"
+    y="${side_y}"
+    z="${sensor_z_offset}"
+    yaw="${pi/2}"/>
+
+  <!-- Side Right Sensor (90° perpendicular right) -->
+  <!-- Positioned 9 inches back from front edge: chassis_length/2 - 9" = 13.5" - 9" = 4.5" = 0.1143m -->
+  <xacro:ultrasonic_sensor
+    name="side_right"
+    parent="base_link"
+    x="0.1143"
+    y="${-side_y}"
+    z="${sensor_z_offset}"
+    yaw="${-pi/2}"/>
+
+  <!-- Rear Sensor (180° straight back) -->
+  <xacro:ultrasonic_sensor
+    name="rear"
+    parent="base_link"
+    x="${rear_x}"
+    y="0"
+    z="${sensor_z_offset}"
+    yaw="${pi}"/>
+
+</robot>

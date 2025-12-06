@@ -1,0 +1,127 @@
+material AprilTag/Tag0
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture apriltag_0.png
+        filtering anisotropic
+        max_anisotropy 16
+      }
+    }
+  }
+}
+
+material AprilTag/Tag1
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture apriltag_1.png
+        filtering anisotropic
+        max_anisotropy 16
+      }
+    }
+  }
+}
+
+material AprilTag/Tag2
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture apriltag_2.png
+        filtering anisotropic
+        max_anisotropy 16
+      }
+    }
+  }
+}
+
+material AprilTag/Tag3
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture apriltag_3.png
+        filtering anisotropic
+        max_anisotropy 16
+      }
+    }
+  }
+}
+
+material AprilTag/Tag4
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture apriltag_4.png
+        filtering anisotropic
+        max_anisotropy 16
+      }
+    }
+  }
+}
+
+material AprilTag/Tag5
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture apriltag_5.png
+        filtering anisotropic
+        max_anisotropy 16
+      }
+    }
+  }
+}
+
+material AprilTag/Tag6
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture apriltag_6.png
+        filtering anisotropic
+        max_anisotropy 16
+      }
+    }
+  }
+}
+
+material AprilTag/Tag7
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture apriltag_7.png
+        filtering anisotropic
+        max_anisotropy 16
+      }
+    }
+  }
+}

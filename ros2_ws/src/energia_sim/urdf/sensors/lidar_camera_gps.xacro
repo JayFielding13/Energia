@@ -1,0 +1,289 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==================== Sensor Properties ==================== -->
+
+  <!-- RP-LIDAR A1 Specifications -->
+  <xacro:property name="lidar_radius" value="0.038"/> <!-- 76mm diameter / 2 -->
+  <xacro:property name="lidar_height" value="0.039"/> <!-- 39mm height -->
+  <xacro:property name="lidar_mass" value="0.170"/> <!-- 170 grams -->
+
+  <!-- Logitech C920X Webcam -->
+  <xacro:property name="camera_width" value="0.094"/> <!-- 94mm width -->
+  <xacro:property name="camera_height" value="0.029"/> <!-- 29mm height -->
+  <xacro:property name="camera_depth" value="0.043"/> <!-- 43mm depth -->
+  <xacro:property name="camera_mass" value="0.162"/> <!-- 162 grams -->
+
+  <!-- HERE 3+ GPS Antenna -->
+  <xacro:property name="gps_radius" value="0.055"/> <!-- ~110mm diameter / 2 -->
+  <xacro:property name="gps_height" value="0.016"/> <!-- ~16mm height (puck style) -->
+  <xacro:property name="gps_mass" value="0.050"/> <!-- ~50 grams -->
+
+  <!-- ==================== RP-LIDAR A1 ==================== -->
+
+  <link name="rplidar_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${lidar_mass}"/>
+      <inertia
+        ixx="${lidar_mass * (3 * lidar_radius * lidar_radius + lidar_height * lidar_height) / 12}"
+        ixy="0.0" ixz="0.0"
+        iyy="${lidar_mass * (3 * lidar_radius * lidar_radius + lidar_height * lidar_height) / 12}"
+        iyz="0.0"
+        izz="${lidar_mass * lidar_radius * lidar_radius / 2}"/>
+    </inertial>
+  </link>
+
+  <!-- Mount RP-LIDAR on top of electronics box, centered, aligned with front edge -->
+  <!-- Electronics box is 12" (0.3048m) square, LiDAR centered on top -->
+  <!-- Front edge alignment: x = ebox_length/2 - lidar_radius -->
+  <!-- Raised 1.5 inches (0.0381m) above original position to see over camera -->
+  <joint name="rplidar_joint" type="fixed">
+    <parent link="electronics_box"/>
+    <child link="rplidar_link"/>
+    <!-- Top of ebox + half lidar height + 1.5" riser, centered in Y, at front edge in X -->
+    <origin xyz="${ebox_length/2 - lidar_radius} 0 ${ebox_height/2 + lidar_height/2 + 0.0381}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ==================== Logitech C920X Webcam ==================== -->
+
+  <link name="camera_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${camera_depth} ${camera_width} ${camera_height}"/>
+      </geometry>
+      <material name="dark_gray">
+        <color rgba="0.3 0.3 0.3 1"/>
+      </material>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${camera_depth} ${camera_width} ${camera_height}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${camera_mass}"/>
+      <inertia
+        ixx="${camera_mass * (camera_width * camera_width + camera_height * camera_height) / 12}"
+        ixy="0.0" ixz="0.0"
+        iyy="${camera_mass * (camera_depth * camera_depth + camera_height * camera_height) / 12}"
+        iyz="0.0"
+        izz="${camera_mass * (camera_depth * camera_depth + camera_width * camera_width) / 12}"/>
+    </inertial>
+  </link>
+
+  <!-- Mount camera on top of electronics box, 4 inches (0.1016m) left of LiDAR, front edge aligned -->
+  <joint name="camera_joint" type="fixed">
+    <parent link="electronics_box"/>
+    <child link="camera_link"/>
+    <!-- Same X as LiDAR (front edge), 4 inches left (+Y), on top -->
+    <origin xyz="${ebox_length/2 - camera_depth/2} 0.1016 ${ebox_height/2 + camera_height/2}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Camera optical frame (standard ROS camera convention: Z forward, X right, Y down) -->
+  <link name="camera_optical_link"/>
+
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_optical_link"/>
+    <!-- Rotate from camera_link (X forward) to optical frame (Z forward) -->
+    <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+  </joint>
+
+  <!-- ==================== HERE 3+ GPS Antenna ==================== -->
+
+  <link name="gps_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${gps_radius}" length="${gps_height}"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0.1 0.1 0.1 1"/>
+      </material>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${gps_radius}" length="${gps_height}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${gps_mass}"/>
+      <inertia
+        ixx="${gps_mass * (3 * gps_radius * gps_radius + gps_height * gps_height) / 12}"
+        ixy="0.0" ixz="0.0"
+        iyy="${gps_mass * (3 * gps_radius * gps_radius + gps_height * gps_height) / 12}"
+        iyz="0.0"
+        izz="${gps_mass * gps_radius * gps_radius / 2}"/>
+    </inertial>
+  </link>
+
+  <!-- Mount GPS inside electronics box, to the right of LiDAR -->
+  <!-- Inside means below the top surface, right side of LiDAR -->
+  <joint name="gps_joint" type="fixed">
+    <parent link="electronics_box"/>
+    <child link="gps_link"/>
+    <!-- Inside box (z=0 at box center), to the right (-Y) of center -->
+    <origin xyz="${ebox_length/2 - gps_radius} -0.08 ${ebox_height/2 - gps_height/2 - 0.01}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ==================== Gazebo Plugins ==================== -->
+
+  <!-- RP-LIDAR A1 Plugin -->
+  <gazebo reference="rplidar_link">
+    <sensor name="rplidar_a1" type="ray">
+      <always_on>true</always_on>
+      <update_rate>10</update_rate>
+      <visualize>true</visualize>
+
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>0</min_angle>
+            <max_angle>${2*pi}</max_angle>
+          </horizontal>
+        </scan>
+
+        <range>
+          <min>0.15</min> <!-- 15cm minimum -->
+          <max>12.0</max> <!-- 12m maximum -->
+          <resolution>0.01</resolution>
+        </range>
+
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+
+      <plugin name="rplidar_controller" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <namespace>/</namespace>
+          <remapping>~/out:=scan</remapping>
+        </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>rplidar_link</frame_name>
+      </plugin>
+    </sensor>
+
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+  <!-- Camera Plugin (Logitech C920X) -->
+  <gazebo reference="camera_link">
+    <sensor name="camera" type="camera">
+      <always_on>true</always_on>
+      <update_rate>30</update_rate>
+      <visualize>true</visualize>
+
+      <camera name="camera">
+        <horizontal_fov>1.085595</horizontal_fov> <!-- ~62 degrees -->
+        <image>
+          <width>1920</width>
+          <height>1080</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.1</near>
+          <far>100</far>
+        </clip>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.007</stddev>
+        </noise>
+      </camera>
+
+      <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+        <ros>
+          <namespace>/</namespace>
+        </ros>
+        <camera_name>camera</camera_name>
+        <frame_name>camera_optical_link</frame_name>
+        <hack_baseline>0.0</hack_baseline>
+      </plugin>
+    </sensor>
+
+    <material>Gazebo/DarkGrey</material>
+  </gazebo>
+
+  <!-- GPS Plugin (HERE 3+) -->
+  <gazebo reference="gps_link">
+    <sensor name="gps_sensor" type="gps">
+      <always_on>true</always_on>
+      <update_rate>10</update_rate>
+
+      <gps>
+        <position_sensing>
+          <horizontal>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.005</stddev> <!-- 5mm accuracy (RTK) -->
+            </noise>
+          </horizontal>
+          <vertical>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.01</stddev> <!-- 10mm vertical accuracy -->
+            </noise>
+          </vertical>
+        </position_sensing>
+
+        <velocity_sensing>
+          <horizontal>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.05</stddev>
+            </noise>
+          </horizontal>
+          <vertical>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.05</stddev>
+            </noise>
+          </vertical>
+        </velocity_sensing>
+      </gps>
+
+      <plugin name="gps_controller" filename="libgazebo_ros_gps_sensor.so">
+        <ros>
+          <namespace>/</namespace>
+          <remapping>~/out:=gps/fix</remapping>
+        </ros>
+        <frame_name>gps_link</frame_name>
+      </plugin>
+    </sensor>
+
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+</robot>

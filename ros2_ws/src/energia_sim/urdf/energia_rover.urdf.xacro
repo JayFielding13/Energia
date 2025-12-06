@@ -1,0 +1,290 @@
+<?xml version="1.0"?>
+<robot name="energia_rover" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==================== Properties/Constants ==================== -->
+
+  <!-- Chassis dimensions (converted to meters) -->
+  <xacro:property name="chassis_length" value="0.6858"/> <!-- 27 inches -->
+  <xacro:property name="chassis_width" value="0.60325"/> <!-- 23.75 inches -->
+  <xacro:property name="chassis_height" value="0.3048"/> <!-- 12 inches -->
+  <xacro:property name="chassis_mass" value="90.7"/> <!-- 200 lbs total rover weight -->
+
+  <!-- Electronics box dimensions (prototype box on top of chassis) -->
+  <xacro:property name="ebox_length" value="0.3048"/> <!-- 12 inches -->
+  <xacro:property name="ebox_width" value="0.3048"/> <!-- 12 inches -->
+  <xacro:property name="ebox_height" value="0.2032"/> <!-- 8 inches -->
+  <xacro:property name="ebox_mass" value="5.0"/> <!-- Estimated 11 lbs for electronics -->
+
+  <!-- Center of mass offset: 4 inches above bottom edge of chassis -->
+  <!-- Bottom edge is at -chassis_height/2, so CoM is at -chassis_height/2 + 0.1016 -->
+  <xacro:property name="com_z_offset" value="${-chassis_height/2 + 0.1016}"/> <!-- 4 inches from bottom -->
+
+  <!-- Wheel dimensions -->
+  <xacro:property name="wheel_radius" value="0.127"/> <!-- 10 inches diameter = 5 inch radius -->
+  <xacro:property name="wheel_width" value="0.0762"/> <!-- 3 inches -->
+  <xacro:property name="wheel_mass" value="4.5"/> <!-- ~10 lbs per wheel (wheelchair motor + wheel assembly) -->
+
+  <!-- Wheel positioning -->
+  <xacro:property name="wheelbase" value="0.4318"/> <!-- 17 inches between front and rear wheels -->
+  <xacro:property name="track_width" value="0.60325"/> <!-- 23.75 inches (flush with chassis) -->
+  <xacro:property name="ground_clearance" value="0.0762"/> <!-- 3 inches -->
+
+  <!-- Calculated positions -->
+  <!-- Rear wheels: rear edge of tire tangent to back edge of chassis -->
+  <!-- Wheel center is one radius forward from back edge -->
+  <xacro:property name="rear_wheel_x_offset" value="${-chassis_length/2 + wheel_radius}"/> <!-- Rear of tire at back edge -->
+  <xacro:property name="front_wheel_x_offset" value="${-chassis_length/2 + wheel_radius + wheelbase}"/> <!-- 17" forward from rear wheel center -->
+  <xacro:property name="wheel_y_offset" value="${track_width/2}"/> <!-- Left/right offset from center -->
+  <xacro:property name="wheel_z_offset" value="${-chassis_height/2 + wheel_radius - ground_clearance}"/>
+
+  <!-- Colors -->
+  <material name="black">
+    <color rgba="0.1 0.1 0.1 1"/>
+  </material>
+
+  <material name="dark_gray">
+    <color rgba="0.3 0.3 0.3 1"/>
+  </material>
+
+  <material name="orange">
+    <color rgba="1.0 0.5 0.0 1"/>
+  </material>
+
+  <material name="blue">
+    <color rgba="0.2 0.4 0.8 1"/>
+  </material>
+
+  <!-- ==================== Macros ==================== -->
+
+  <!-- Wheel macro -->
+  <xacro:macro name="wheel" params="prefix side x_offset y_reflect">
+    <link name="${prefix}_${side}_wheel">
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="black"/>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+
+      <inertial>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <mass value="${wheel_mass}"/>
+        <inertia
+          ixx="${wheel_mass * (3 * wheel_radius * wheel_radius + wheel_width * wheel_width) / 12}"
+          ixy="0.0" ixz="0.0"
+          iyy="${wheel_mass * (3 * wheel_radius * wheel_radius + wheel_width * wheel_width) / 12}"
+          iyz="0.0"
+          izz="${wheel_mass * wheel_radius * wheel_radius / 2}"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}_${side}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${prefix}_${side}_wheel"/>
+      <origin xyz="${x_offset} ${y_reflect * wheel_y_offset} ${wheel_z_offset}"
+              rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <dynamics damping="5.0" friction="1.0"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- ==================== Base Link (Chassis) ==================== -->
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="orange"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <!-- Center of mass: 4 inches above bottom edge (centered in x,y) -->
+      <origin xyz="0 0 ${com_z_offset}" rpy="0 0 0"/>
+      <mass value="${chassis_mass}"/>
+      <inertia
+        ixx="${chassis_mass * (chassis_width * chassis_width + chassis_height * chassis_height) / 12}"
+        ixy="0.0" ixz="0.0"
+        iyy="${chassis_mass * (chassis_length * chassis_length + chassis_height * chassis_height) / 12}"
+        iyz="0.0"
+        izz="${chassis_mass * (chassis_length * chassis_length + chassis_width * chassis_width) / 12}"/>
+    </inertial>
+  </link>
+
+  <!-- ==================== Wheels ==================== -->
+
+  <!-- Front Left Wheel -->
+  <xacro:wheel prefix="front" side="left" x_offset="${front_wheel_x_offset}" y_reflect="1"/>
+
+  <!-- Front Right Wheel -->
+  <xacro:wheel prefix="front" side="right" x_offset="${front_wheel_x_offset}" y_reflect="-1"/>
+
+  <!-- Rear Left Wheel (flush with back edge) -->
+  <xacro:wheel prefix="rear" side="left" x_offset="${rear_wheel_x_offset}" y_reflect="1"/>
+
+  <!-- Rear Right Wheel (flush with back edge) -->
+  <xacro:wheel prefix="rear" side="right" x_offset="${rear_wheel_x_offset}" y_reflect="-1"/>
+
+  <!-- ==================== Electronics Box ==================== -->
+
+  <!-- Prototype electronics box (centered on top of chassis) -->
+  <!-- Contains Jetson, Cube Orange, ESC controllers, power distribution, etc. -->
+  <link name="electronics_box">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${ebox_length} ${ebox_width} ${ebox_height}"/>
+      </geometry>
+      <material name="dark_gray"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${ebox_length} ${ebox_width} ${ebox_height}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${ebox_mass}"/>
+      <inertia
+        ixx="${ebox_mass * (ebox_width * ebox_width + ebox_height * ebox_height) / 12}"
+        ixy="0.0" ixz="0.0"
+        iyy="${ebox_mass * (ebox_length * ebox_length + ebox_height * ebox_height) / 12}"
+        iyz="0.0"
+        izz="${ebox_mass * (ebox_length * ebox_length + ebox_width * ebox_width) / 12}"/>
+    </inertial>
+  </link>
+
+  <joint name="electronics_box_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="electronics_box"/>
+    <!-- Positioned on top of chassis: chassis top + half box height -->
+    <origin xyz="0 0 ${chassis_height/2 + ebox_height/2}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ==================== Sensor Mounts (Placeholders) ==================== -->
+
+  <!-- Cube Orange mount point (inside electronics box) -->
+  <!-- Located 6 inches (0.1524m) below LiDAR, centered, IMU facing forward -->
+  <!-- LiDAR is at top of ebox, so Cube Orange is at ebox_height/2 - 0.1524 -->
+  <link name="cube_orange_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.08 0.08 0.04"/> <!-- Approximate Cube Orange size -->
+      </geometry>
+      <material name="blue"/>
+    </visual>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.038"/> <!-- 38 grams -->
+      <inertia
+        ixx="0.00001" ixy="0.0" ixz="0.0"
+        iyy="0.00001" iyz="0.0"
+        izz="0.00001"/>
+    </inertial>
+  </link>
+
+  <joint name="cube_orange_joint" type="fixed">
+    <parent link="electronics_box"/>
+    <child link="cube_orange_link"/>
+    <!-- 6 inches below top of ebox, centered, IMU arrow pointing forward (X+) -->
+    <origin xyz="0 0 ${ebox_height/2 - 0.1524}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Jetson mount point (inside electronics box, lower section) -->
+  <link name="jetson_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.10 0.08 0.03"/> <!-- Approximate Jetson size -->
+      </geometry>
+      <material name="blue"/>
+    </visual>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.200"/> <!-- ~200 grams -->
+      <inertia
+        ixx="0.00005" ixy="0.0" ixz="0.0"
+        iyy="0.00005" iyz="0.0"
+        izz="0.00005"/>
+    </inertial>
+  </link>
+
+  <joint name="jetson_joint" type="fixed">
+    <parent link="electronics_box"/>
+    <child link="jetson_link"/>
+    <!-- Lower section of electronics box -->
+    <origin xyz="-0.05 0 ${-ebox_height/2 + 0.04}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ==================== Gazebo-specific configurations ==================== -->
+
+  <gazebo reference="base_link">
+    <material>Gazebo/Orange</material>
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+
+  <gazebo reference="electronics_box">
+    <material>Gazebo/DarkGrey</material>
+  </gazebo>
+
+  <!-- Skid-steer friction model: high forward friction, low lateral friction -->
+  <gazebo reference="front_left_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.5</mu1>  <!-- Forward/backward friction (rolling) -->
+    <mu2>0.5</mu2>  <!-- Lateral friction (sideways slide) - LOW for skid steer -->
+    <kp>10000000.0</kp>
+    <kd>1.0</kd>
+    <min_depth>0.001</min_depth>
+  </gazebo>
+
+  <gazebo reference="front_right_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.5</mu1>  <!-- Forward/backward friction (rolling) -->
+    <mu2>0.5</mu2>  <!-- Lateral friction (sideways slide) - LOW for skid steer -->
+    <kp>10000000.0</kp>
+    <kd>1.0</kd>
+    <min_depth>0.001</min_depth>
+  </gazebo>
+
+  <gazebo reference="rear_left_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.5</mu1>  <!-- Forward/backward friction (rolling) -->
+    <mu2>0.5</mu2>  <!-- Lateral friction (sideways slide) - LOW for skid steer -->
+    <kp>10000000.0</kp>
+    <kd>1.0</kd>
+    <min_depth>0.001</min_depth>
+  </gazebo>
+
+  <gazebo reference="rear_right_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.5</mu1>  <!-- Forward/backward friction (rolling) -->
+    <mu2>0.5</mu2>  <!-- Lateral friction (sideways slide) - LOW for skid steer -->
+    <kp>10000000.0</kp>
+    <kd>1.0</kd>
+    <min_depth>0.001</min_depth>
+  </gazebo>
+
+</robot>
