@@ -37,6 +37,7 @@ setup(
             'apriltag_follower = energia_bridge.apriltag_follower:main',
             'reactive_obstacle_avoidance = energia_bridge.reactive_obstacle_avoidance:main',
             'apriltag_follower_reactive = energia_bridge.apriltag_follower_reactive:main',
+            'waypoint_navigator = energia_bridge.waypoint_navigator:main',
         ],
     },
 )

@@ -7,10 +7,11 @@ Compatible with robot_controller.py API interface
 
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import NavSatFix
+from sensor_msgs.msg import NavSatFix, NavSatStatus
 from geometry_msgs.msg import Twist, PoseStamped
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Bool, Float32
+from std_msgs.msg import Bool, Float32, String
+import json
 from flask import Flask, request, jsonify
 import threading
 import time
@@ -29,9 +30,13 @@ class HTTPBridgeNode(Node):
         self.current_odom = None
         self.target_waypoint = None
 
+        # Navigation status (from waypoint_navigator)
+        self.nav_status = None
+
         # Publishers
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.waypoint_pub = self.create_publisher(PoseStamped, '/waypoint/goto', 10)
+        self.waypoint_target_pub = self.create_publisher(NavSatFix, '/waypoint/target', 10)
         self.arm_pub = self.create_publisher(Bool, '/rover/armed', 10)
 
         # Subscribers
@@ -49,6 +54,13 @@ class HTTPBridgeNode(Node):
             10
         )
 
+        self.nav_status_sub = self.create_subscription(
+            String,
+            '/navigation/status',
+            self.nav_status_callback,
+            10
+        )
+
         self.get_logger().info('HTTP Bridge Node initialized')
 
     def gps_callback(self, msg):
@@ -58,6 +70,13 @@ class HTTPBridgeNode(Node):
     def odom_callback(self, msg):
         """Store latest odometry data"""
         self.current_odom = msg
+
+    def nav_status_callback(self, msg):
+        """Store navigation status from waypoint_navigator"""
+        try:
+            self.nav_status = json.loads(msg.data)
+        except json.JSONDecodeError:
+            self.get_logger().warn('Invalid navigation status JSON')
 
     def arm_motors(self):
         """ARM motors"""
@@ -94,13 +113,23 @@ class HTTPBridgeNode(Node):
         return True
 
     def send_waypoint(self, lat, lon):
-        """Send GPS waypoint to rover"""
+        """Send GPS waypoint to rover via waypoint_navigator"""
         self.target_waypoint = (lat, lon)
 
-        # For now, just log it
-        # In full implementation, this would convert GPS to local coordinates
-        # and publish a goal pose
-        self.get_logger().info(f'Waypoint set: {lat:.6f}, {lon:.6f}')
+        # Publish NavSatFix message for waypoint_navigator
+        msg = NavSatFix()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'gps'
+        msg.latitude = lat
+        msg.longitude = lon
+        msg.altitude = 0.0
+        msg.status.status = NavSatStatus.STATUS_FIX
+        msg.status.service = NavSatStatus.SERVICE_GPS
+        self.waypoint_target_pub.publish(msg)
+
+        # Switch to autonomous mode
+        self.mode = "autonomous"
+        self.get_logger().info(f'Waypoint published: {lat:.6f}, {lon:.6f}')
         return True
 
     def emergency_stop(self):
@@ -138,6 +167,16 @@ class HTTPBridgeNode(Node):
             status['velocity'] = {
                 'linear': self.current_odom.twist.twist.linear.x,
                 'angular': self.current_odom.twist.twist.angular.z
+            }
+
+        # Add navigation status if available
+        if self.nav_status:
+            status['navigation'] = {
+                'state': self.nav_status.get('state', 'unknown'),
+                'target': self.nav_status.get('target'),
+                'distance_to_target': self.nav_status.get('distance_to_target'),
+                'heading_error': self.nav_status.get('heading_error'),
+                'obstacle_avoidance': self.nav_status.get('obstacle_avoidance')
             }
 
         return status

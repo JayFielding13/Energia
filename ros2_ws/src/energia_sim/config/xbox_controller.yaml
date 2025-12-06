@@ -1,0 +1,29 @@
+# Xbox Controller Configuration for Energia Rover
+# Used with teleop_twist_joy package
+
+teleop_twist_joy_node:
+  ros__parameters:
+    # Axis mappings (Xbox 360/One controller)
+    axis_linear:
+      x: 1  # Left stick vertical (forward/backward)
+    axis_angular:
+      yaw: 0  # Left stick horizontal (turn left/right)
+
+    # Scale factors for velocity commands
+    scale_linear:
+      x: 0.5  # Max linear velocity (m/s)
+    scale_angular:
+      yaw: 1.0  # Max angular velocity (rad/s)
+
+    # Turbo mode (hold button for higher speed)
+    scale_linear_turbo:
+      x: 1.0  # Turbo linear velocity (m/s)
+    scale_angular_turbo:
+      yaw: 2.0  # Turbo angular velocity (rad/s)
+
+    # Button mappings
+    enable_button: 4  # LB - hold to enable normal speed
+    enable_turbo_button: 5  # RB - hold for turbo speed
+
+    # Require deadman switch (must hold enable button to move)
+    require_enable_button: true
