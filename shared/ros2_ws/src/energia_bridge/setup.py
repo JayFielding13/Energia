@@ -38,6 +38,9 @@ setup(
             'reactive_obstacle_avoidance = energia_bridge.reactive_obstacle_avoidance:main',
             'apriltag_follower_reactive = energia_bridge.apriltag_follower_reactive:main',
             'waypoint_navigator = energia_bridge.waypoint_navigator:main',
+            'odom_to_tf = energia_bridge.odom_to_tf:main',
+            'static_joint_publisher = energia_bridge.static_joint_publisher:main',
+            'timestamp_republisher = energia_bridge.timestamp_republisher:main',
         ],
     },
 )

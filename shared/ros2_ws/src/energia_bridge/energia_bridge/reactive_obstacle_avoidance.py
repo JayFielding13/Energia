@@ -103,8 +103,9 @@ class PredictiveObstacleAvoidance(Node):
         self.obstacles_front = []
         self.closest_obstacle_dist = float('inf')
 
-        # Subscribers - use BEST_EFFORT to match Gazebo sensor plugin default
-        # Gazebo publishes sensor data with BEST_EFFORT, so we must match
+        # Subscribers - use BEST_EFFORT for sensor data from ros_gz_bridge
+        # ros_gz_bridge publishes sensor data as BEST_EFFORT, not RELIABLE
+        # See: https://gazebosim.org/docs/harmonic/ros2_integration/
         from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
         scan_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,

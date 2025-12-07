@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
-<sdf version="1.6">
+<sdf version="1.9">
   <model name="apriltag_stand">
-    <static>false</static> <!-- Can be moved in simulation -->
+    <static>false</static>
     <link name="stand">
       <!-- Vertical post -->
       <pose>0 0 0.5 0 0 0</pose>
@@ -23,6 +23,7 @@
         <material>
           <ambient>0.3 0.3 0.3 1</ambient>
           <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
         </material>
       </visual>
 
@@ -45,6 +46,7 @@
         <material>
           <ambient>0.3 0.3 0.3 1</ambient>
           <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
         </material>
       </visual>
 
@@ -67,7 +69,7 @@
       <collision name="tag_collision">
         <geometry>
           <box>
-            <size>0.30 0.30 0.005</size> <!-- 30cm x 30cm board, 5mm thick -->
+            <size>0.30 0.30 0.005</size>
           </box>
         </geometry>
       </collision>
@@ -77,12 +79,12 @@
             <size>0.30 0.30 0.005</size>
           </box>
         </geometry>
+        <!-- White background for AprilTag -->
+        <!-- For actual AprilTag textures, use PBR material with texture file -->
         <material>
-          <script>
-            <uri>model://apriltag_stand/materials/scripts</uri>
-            <uri>model://apriltag_stand/materials/textures</uri>
-            <name>AprilTag/Tag0</name>
-          </script>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
         </material>
       </visual>
 

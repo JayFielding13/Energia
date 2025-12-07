@@ -207,22 +207,30 @@ class WaypointNavigator(Node):
             self.transition_to(NavigationState.NAVIGATING)
 
     def goal_pose_callback(self, msg: PoseStamped):
-        """Handle 2D Goal Pose from RViz"""
+        """Handle 2D Goal Pose from RViz (SIMULATION ONLY)"""
+        # Only allow RViz goal pose in simulation mode for safety
+        if not self.simulation_mode:
+            self.get_logger().warn(
+                'RViz 2D Goal Pose ignored - only available in simulation mode. '
+                'Use HTTP API for real hardware.'
+            )
+            return
+
         self.target_x = msg.pose.position.x
         self.target_y = msg.pose.position.y
         self.target_lat, self.target_lon = self.local_to_gps(self.target_x, self.target_y)
 
         self.get_logger().info(
-            f'RViz goal: local ({self.target_x:.2f}, {self.target_y:.2f}) '
+            f'[SIMULATION] RViz goal: local ({self.target_x:.2f}, {self.target_y:.2f}) '
             f'-> GPS ({self.target_lat:.6f}, {self.target_lon:.6f})'
         )
 
         self.publish_waypoint_marker()
 
-        # Auto-arm for RViz goals
+        # Auto-arm for RViz goals (simulation only)
         if not self.armed:
             self.armed = True
-            self.get_logger().info('Auto-armed for RViz goal')
+            self.get_logger().info('[SIMULATION] Auto-armed for RViz goal')
 
         if self.state == NavigationState.IDLE:
             self.transition_to(NavigationState.NAVIGATING)

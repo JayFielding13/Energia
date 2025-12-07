@@ -1,18 +1,37 @@
 <?xml version="1.0" ?>
-<sdf version="1.6">
+<sdf version="1.9">
   <world name="maze_world">
 
     <!-- Physics Configuration -->
-    <physics type="ode">
+    <physics name="1ms" type="ignored">
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1</real_time_factor>
-      <real_time_update_rate>1000</real_time_update_rate>
     </physics>
 
+    <!-- Gazebo Harmonic plugins -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
+
     <!-- Lighting -->
-    <include>
-      <uri>model://sun</uri>
-    </include>
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
 
     <!-- Ground Plane -->
     <model name="ground_plane">
@@ -261,12 +280,11 @@
 
     <!-- ============================================== -->
     <!-- APRILTAG STANDS - 8 tags in open areas         -->
-    <!-- Tags are VERTICAL (facing horizontally)        -->
-    <!-- Each tag faces toward the center of the arena  -->
-    <!-- Tag height: 0.5m (camera height on rover)      -->
+    <!-- Note: AprilTag textures need to be configured  -->
+    <!-- for Gazebo Harmonic separately                 -->
     <!-- ============================================== -->
 
-    <!-- AprilTag 0 - Upper left quadrant, faces toward center (SE) -->
+    <!-- AprilTag 0 - Upper left quadrant -->
     <model name="apriltag_0">
       <static>true</static>
       <pose>-8 8 0.5 1.5708 0 -0.785</pose>
@@ -277,17 +295,14 @@
         <visual name="tag_visual">
           <geometry><box><size>0.30 0.30 0.005</size></box></geometry>
           <material>
-            <script>
-              <uri>model://apriltag_stand/materials/scripts</uri>
-              <uri>model://apriltag_stand/materials/textures</uri>
-              <name>AprilTag/Tag0</name>
-            </script>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- AprilTag 1 - Upper right quadrant, faces toward center (SW) -->
+    <!-- AprilTag 1 - Upper right quadrant -->
     <model name="apriltag_1">
       <static>true</static>
       <pose>8 8 0.5 1.5708 0 -2.356</pose>
@@ -298,17 +313,14 @@
         <visual name="tag_visual">
           <geometry><box><size>0.30 0.30 0.005</size></box></geometry>
           <material>
-            <script>
-              <uri>model://apriltag_stand/materials/scripts</uri>
-              <uri>model://apriltag_stand/materials/textures</uri>
-              <name>AprilTag/Tag1</name>
-            </script>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- AprilTag 2 - Center left, faces East (toward center) -->
+    <!-- AprilTag 2 - Center left -->
     <model name="apriltag_2">
       <static>true</static>
       <pose>-8 0 0.5 1.5708 0 0</pose>
@@ -319,17 +331,14 @@
         <visual name="tag_visual">
           <geometry><box><size>0.30 0.30 0.005</size></box></geometry>
           <material>
-            <script>
-              <uri>model://apriltag_stand/materials/scripts</uri>
-              <uri>model://apriltag_stand/materials/textures</uri>
-              <name>AprilTag/Tag2</name>
-            </script>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- AprilTag 3 - Center right, faces West (toward center) -->
+    <!-- AprilTag 3 - Center right -->
     <model name="apriltag_3">
       <static>true</static>
       <pose>8 0 0.5 1.5708 0 3.14159</pose>
@@ -340,17 +349,14 @@
         <visual name="tag_visual">
           <geometry><box><size>0.30 0.30 0.005</size></box></geometry>
           <material>
-            <script>
-              <uri>model://apriltag_stand/materials/scripts</uri>
-              <uri>model://apriltag_stand/materials/textures</uri>
-              <name>AprilTag/Tag3</name>
-            </script>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- AprilTag 4 - Lower left quadrant, faces toward center (NE) -->
+    <!-- AprilTag 4 - Lower left quadrant -->
     <model name="apriltag_4">
       <static>true</static>
       <pose>-8 -8 0.5 1.5708 0 0.785</pose>
@@ -361,17 +367,14 @@
         <visual name="tag_visual">
           <geometry><box><size>0.30 0.30 0.005</size></box></geometry>
           <material>
-            <script>
-              <uri>model://apriltag_stand/materials/scripts</uri>
-              <uri>model://apriltag_stand/materials/textures</uri>
-              <name>AprilTag/Tag4</name>
-            </script>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- AprilTag 5 - Lower right quadrant, faces toward center (NW) -->
+    <!-- AprilTag 5 - Lower right quadrant -->
     <model name="apriltag_5">
       <static>true</static>
       <pose>8 -8 0.5 1.5708 0 2.356</pose>
@@ -382,17 +385,14 @@
         <visual name="tag_visual">
           <geometry><box><size>0.30 0.30 0.005</size></box></geometry>
           <material>
-            <script>
-              <uri>model://apriltag_stand/materials/scripts</uri>
-              <uri>model://apriltag_stand/materials/textures</uri>
-              <name>AprilTag/Tag5</name>
-            </script>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- AprilTag 6 - Top center, faces South (toward center) -->
+    <!-- AprilTag 6 - Top center -->
     <model name="apriltag_6">
       <static>true</static>
       <pose>0 10 0.5 1.5708 0 -1.5708</pose>
@@ -403,17 +403,14 @@
         <visual name="tag_visual">
           <geometry><box><size>0.30 0.30 0.005</size></box></geometry>
           <material>
-            <script>
-              <uri>model://apriltag_stand/materials/scripts</uri>
-              <uri>model://apriltag_stand/materials/textures</uri>
-              <name>AprilTag/Tag6</name>
-            </script>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
           </material>
         </visual>
       </link>
     </model>
 
-    <!-- AprilTag 7 - Bottom center, faces North (toward center) -->
+    <!-- AprilTag 7 - Bottom center -->
     <model name="apriltag_7">
       <static>true</static>
       <pose>0 -10 0.5 1.5708 0 1.5708</pose>
@@ -424,11 +421,8 @@
         <visual name="tag_visual">
           <geometry><box><size>0.30 0.30 0.005</size></box></geometry>
           <material>
-            <script>
-              <uri>model://apriltag_stand/materials/scripts</uri>
-              <uri>model://apriltag_stand/materials/textures</uri>
-              <name>AprilTag/Tag7</name>
-            </script>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
           </material>
         </visual>
       </link>

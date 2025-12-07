@@ -7,7 +7,7 @@
   <xacro:property name="ultrasonic_height" value="0.2794"/> <!-- 11 inches from ground -->
   <xacro:property name="ultrasonic_min_range" value="0.20"/> <!-- 20cm minimum -->
   <xacro:property name="ultrasonic_max_range" value="6.0"/> <!-- 600cm maximum -->
-  <xacro:property name="ultrasonic_fov" value="1.22"/> <!-- 70° cone = 1.22 radians -->
+  <xacro:property name="ultrasonic_fov" value="1.22"/> <!-- 70 deg cone = 1.22 radians -->
   <xacro:property name="ultrasonic_update_rate" value="20"/> <!-- 20 Hz -->
 
   <!-- ==================== Ultrasonic Sensor Macro ==================== -->
@@ -50,16 +50,17 @@
       <origin xyz="${x} ${y} ${z}" rpy="0 0 ${yaw}"/>
     </joint>
 
-    <!-- Gazebo sensor plugin -->
+    <!-- Gazebo Harmonic sensor plugin -->
     <gazebo reference="${name}_link">
-      <sensor name="${name}" type="ray">
+      <sensor name="${name}" type="gpu_lidar">
         <always_on>true</always_on>
         <update_rate>${ultrasonic_update_rate}</update_rate>
         <visualize>false</visualize>
+        <topic>ultrasonic/${name}</topic>
 
-        <ray>
+        <lidar>
           <scan>
-            <!-- Simulate 70° cone with 5 horizontal rays -->
+            <!-- Simulate 70 deg cone with 5 horizontal rays -->
             <horizontal>
               <samples>5</samples>
               <resolution>1</resolution>
@@ -78,48 +79,33 @@
           <range>
             <min>${ultrasonic_min_range}</min>
             <max>${ultrasonic_max_range}</max>
-            <resolution>0.01</resolution> <!-- 1cm resolution -->
+            <resolution>0.01</resolution>
           </range>
 
           <noise>
             <type>gaussian</type>
             <mean>0.0</mean>
-            <stddev>0.01</stddev> <!-- ±1cm accuracy -->
+            <stddev>0.01</stddev>
           </noise>
-        </ray>
+        </lidar>
 
-        <plugin name="${name}_controller" filename="libgazebo_ros_ray_sensor.so">
-          <ros>
-            <namespace>/ultrasonic</namespace>
-            <remapping>~/out:=${name}</remapping>
-          </ros>
-          <output_type>sensor_msgs/Range</output_type>
-          <frame_name>${name}_link</frame_name>
-          <radiation_type>ultrasound</radiation_type>
-        </plugin>
+        <gz_frame_id>${name}_link</gz_frame_id>
       </sensor>
 
-      <material>Gazebo/Grey</material>
+      <material>
+        <ambient>0.3 0.3 0.3 1</ambient>
+        <diffuse>0.5 0.5 0.5 1</diffuse>
+      </material>
     </gazebo>
 
   </xacro:macro>
 
   <!-- ==================== 6-Sensor Array Instantiation ==================== -->
 
-  <!--
-    Sensor Layout (Top-Down View):
-
-                        FRONT
-          [Corner L] [Front] [Corner R]
-              45°      0°       45°
-               \       |       /
-                \      |      /
-      [Side L]   \     |     /    [Side R]
-       90°        \    |    /       90°
-                   └───┴───┘
-                      |
-                    [Rear]
-                     180°
+  <!-- Sensor Layout (Top-Down View):
+       FRONT: Corner Left (45deg), Front (0deg), Corner Right (45deg)
+       SIDES: Side Left (90deg), Side Right (90deg)
+       REAR: Rear (180deg)
   -->
 
   <!-- Mounting heights: All sensors at 11 inches (0.2794m) from ground -->
@@ -132,7 +118,7 @@
   <xacro:property name="rear_x" value="${-chassis_length/2}"/> <!-- Rear edge -->
   <xacro:property name="side_y" value="${chassis_width/2}"/> <!-- Side edges -->
 
-  <!-- Front Sensor (0° - straight ahead) -->
+  <!-- Front Sensor (0 deg - straight ahead) -->
   <xacro:ultrasonic_sensor
     name="front"
     parent="base_link"
@@ -141,7 +127,7 @@
     z="${sensor_z_offset}"
     yaw="0"/>
 
-  <!-- Corner Left Sensor (45° outward-left from front) -->
+  <!-- Corner Left Sensor (45 deg outward-left from front) -->
   <xacro:ultrasonic_sensor
     name="corner_left"
     parent="base_link"
@@ -150,7 +136,7 @@
     z="${sensor_z_offset}"
     yaw="${pi/4}"/>
 
-  <!-- Corner Right Sensor (45° outward-right from front) -->
+  <!-- Corner Right Sensor (45 deg outward-right from front) -->
   <xacro:ultrasonic_sensor
     name="corner_right"
     parent="base_link"
@@ -159,7 +145,7 @@
     z="${sensor_z_offset}"
     yaw="${-pi/4}"/>
 
-  <!-- Side Left Sensor (90° perpendicular left) -->
+  <!-- Side Left Sensor (90 deg perpendicular left) -->
   <!-- Positioned 9 inches back from front edge: chassis_length/2 - 9" = 13.5" - 9" = 4.5" = 0.1143m -->
   <xacro:ultrasonic_sensor
     name="side_left"
@@ -169,7 +155,7 @@
     z="${sensor_z_offset}"
     yaw="${pi/2}"/>
 
-  <!-- Side Right Sensor (90° perpendicular right) -->
+  <!-- Side Right Sensor (90 deg perpendicular right) -->
   <!-- Positioned 9 inches back from front edge: chassis_length/2 - 9" = 13.5" - 9" = 4.5" = 0.1143m -->
   <xacro:ultrasonic_sensor
     name="side_right"
@@ -179,7 +165,7 @@
     z="${sensor_z_offset}"
     yaw="${-pi/2}"/>
 
-  <!-- Rear Sensor (180° straight back) -->
+  <!-- Rear Sensor (180 deg straight back) -->
   <xacro:ultrasonic_sensor
     name="rear"
     parent="base_link"
