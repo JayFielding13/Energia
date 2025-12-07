@@ -420,43 +420,287 @@ And in `energia_rover_gazebo.xacro`:
 - **Energy optimization:** Variable speed based on terrain
 - **Regenerative braking:** If controllers support it
 
-## Motor Driver Pinout (MDDS30)
+## NUCLEO-F446RE Pin Definitions
 
-### Connections (Mixed R/C Mode)
+### Board Overview
 
-The MDDS30 drivers operate in **Mixed R/C mode** for simplified control:
+The **NUCLEO-F446RE** is the motor controller MCU that receives commands via CAN bus and generates PWM signals for the MDDS30 motor drivers.
+
+| Parameter | Value |
+|-----------|-------|
+| **MCU** | STM32F446RET6 |
+| **Core** | ARM Cortex-M4 @ 180 MHz |
+| **Flash** | 512 KB |
+| **RAM** | 128 KB |
+| **CAN** | CAN1 (requires external transceiver) |
+| **Timers** | TIM1-TIM14 (multiple PWM capable) |
+
+### Pin Assignments
+
+#### PWM Outputs (to MDDS30 Drivers)
+
+| Function | STM32 Pin | Connector | Arduino Pin | Timer | Notes |
+|----------|-----------|-----------|-------------|-------|-------|
+| **PWM Throttle** | PA8 | CN9-8 | D7 | TIM1_CH1 | Forward/backward control |
+| **PWM Steering** | PA9 | CN5-1 | D8 | TIM1_CH2 | Left/right differential |
+
+#### CAN Bus (Seeed Studio MCP2515/SN65HVD230 Module via SPI)
+
+The MCP2515 CAN controller communicates via **SPI**, not the STM32's native CAN pins.
+
+| Function | STM32 Pin | Connector | Arduino Pin | MCP2515 Pin | Notes |
+|----------|-----------|-----------|-------------|-------------|-------|
+| **SPI1_SCK** | PA5 | CN5-6 | D13 | SCK | SPI Clock |
+| **SPI1_MISO** | PA6 | CN5-5 | D12 | SO (MISO) | SPI Data Out |
+| **SPI1_MOSI** | PA7 | CN5-4 | D11 | SI (MOSI) | SPI Data In |
+| **SPI1_CS** | PB6 | CN5-3 | D10 | CS | Chip Select |
+| **INT** | PB5 | CN9-6 | D4 | INT | Interrupt (active low) |
+
+**Connector Notes:**
+- **CN5** - 6-pin Arduino SPI header (directly above CN9)
+- **CN9** - 8-pin Arduino digital header (D0-D7)
+- **CN7/CN10** - 38-pin Morpho connectors (outer rows)
+
+**Note:** PA5 is also the onboard LED (LD2). If you need the LED for status, use SPI2 instead (PB13=SCK, PB14=MISO, PB15=MOSI on CN10).
+
+#### Status LEDs and Debug
+
+| Function | STM32 Pin | Connector | Notes |
+|----------|-----------|-----------|-------|
+| **User LED** | PA5 | LD2 (onboard) | Green LED, shared with SPI1_SCK |
+| **User Button** | PC13 | B1 (onboard) | Blue button, active low |
+
+#### Optional: Kill Switch Input
+
+| Function | STM32 Pin | Connector | Arduino Pin | Notes |
+|----------|-----------|-----------|-------------|-------|
+| **Kill Switch** | PC0 | CN7-38 | A5 | External kill relay signal (active low) |
+
+### Seeed Studio MCP2515/SN65HVD230 Module Wiring
+
+The Seeed Studio CAN module contains:
+- **MCP2515** - CAN controller (SPI interface)
+- **SN65HVD230** - CAN transceiver (3.3V compatible)
 
 ```
-STM32 Nucleo → MDDS30 Drivers:
-
-MDDS30 Driver #1 (Front Wheels) - Mixed R/C Mode:
-  D6 (PWM)  → IN1 (Throttle channel)
-  D5 (PWM)  → IN2 (Steering channel)
-  GND       → Common ground
-  V+        → Battery + (24V)
-  M1+/-     → Front left motor
-  M2+/-     → Front right motor
-
-MDDS30 Driver #2 (Rear Wheels) - Mixed R/C Mode:
-  D6 (PWM)  → IN1 (Throttle channel) [parallel with Driver #1]
-  D5 (PWM)  → IN2 (Steering channel) [parallel with Driver #1]
-  GND       → Common ground
-  V+        → Battery + (24V)
-  M1+/-     → Rear left motor
-  M2+/-     → Rear right motor
+NUCLEO-F446RE                    Seeed MCP2515/SN65HVD230 Module
+┌─────────────┐                  ┌─────────────────────────────┐
+│             │                  │                             │
+│  PA5 (D13) ─┼──────────────────┼── SCK     ┌───────────────┐│
+│             │                  │           │   MCP2515     ││
+│  PA6 (D12) ─┼──────────────────┼── SO      │  (CAN Ctrl)   ││
+│             │                  │           └───────┬───────┘│
+│  PA7 (D11) ─┼──────────────────┼── SI              │        │
+│             │                  │                   │        │
+│  PB6 (D10) ─┼──────────────────┼── CS      ┌───────┴───────┐│
+│             │                  │           │  SN65HVD230   ││
+│  PB5 (D4) ──┼──────────────────┼── INT     │ (Transceiver) ││
+│             │                  │           └───────┬───────┘│
+│  3.3V ──────┼──────────────────┼── VCC             │        │
+│             │                  │                   │        │
+│  GND ───────┼──────────────────┼── GND     CAN_H ──┼────────┼──► To CAN Bus
+│             │                  │           CAN_L ──┼────────┼──► To CAN Bus
+└─────────────┘                  │                             │
+                                 └─────────────────────────────┘
 ```
 
-### CAN Bus Connection
+**Module Pinout (typical 8-pin header):**
+
+| Module Pin | Connect To | Description |
+|------------|------------|-------------|
+| VCC | 3.3V (CN6-4 or CN7-16) | Power supply - **use 3.3V** for NUCLEO compatibility |
+| GND | GND (CN6-6 or CN5-7) | Ground |
+| CS | PB6 (D10) | SPI Chip Select |
+| SO | PA6 (D12) | SPI MISO (Master In, Slave Out) |
+| SI | PA7 (D11) | SPI MOSI (Master Out, Slave In) |
+| SCK | PA5 (D13) | SPI Clock |
+| INT | PB5 (D4) | Interrupt output (active low) |
+| CAN_H | CAN Bus | CAN High line |
+| CAN_L | CAN Bus | CAN Low line |
+
+**Point-to-Point Wiring (NUCLEO → Seeed Module):**
+
+| NUCLEO Pin | Connector-Pin | Wire | Seeed Module Pin | Function |
+|------------|---------------|------|------------------|----------|
+| D13 | CN5-6 | White | SCK | SPI Clock |
+| D12 | CN5-5 | Gray | SO (MISO) | Data from module |
+| D11 | CN5-4 | Purple | SI (MOSI) | Data to module |
+| D10 | CN5-3 | Blue | CS | Chip Select |
+| D4 | CN9-6 | Green | INT | Interrupt |
+| 3V3 | CN6-4 | Red | VCC | 3.3V Power |
+| GND | CN6-6 | Black | GND | Ground |
+
+**Important:**
+- Add 120Ω termination resistor between CAN_H and CAN_L at each end of the bus
+- **Use 3.3V power** - The SN65HVD230 transceiver is designed for 3.3V operation
+- The MCP2515 also operates at 3.3V, matching STM32 logic levels (no level shifters needed)
+- Power from NUCLEO: CN6-4 (3V3 near USB) or CN7-16 (Morpho connector) - both provide ~300mA
+
+### MDDS30 Wiring (Mixed R/C Mode)
+
+The MDDS30 operates in **Mixed R/C mode** where:
+- **Channel 1 (IN1):** Throttle - controls forward/backward for both motors
+- **Channel 2 (IN2):** Steering - controls differential (left/right speed difference)
 
 ```
-Jetson Orin Nano:
-  USB Port  → USB-to-CAN Adapter
-
-USB-to-CAN Adapter:
-  CAN_H     → STM32 CAN transceiver CAN_H
-  CAN_L     → STM32 CAN transceiver CAN_L
-  GND       → Common ground
+NUCLEO-F446RE                         MDDS30 Driver #1 (Front)
+┌─────────────┐                       ┌─────────────────────┐
+│             │                       │                     │
+│  PA8 (D7) ──┼───────┬───────────────┼── IN1 (Throttle)   │
+│             │       │               │                     │
+│  PA9 (D8) ──┼───┬───┼───────────────┼── IN2 (Steering)   │
+│             │   │   │               │                     │
+│  GND ───────┼───┼───┼───────────────┼── GND              │
+│             │   │   │               │                     │
+└─────────────┘   │   │               │  M1+/- ────────────┼──► Front Left Motor
+                  │   │               │  M2+/- ────────────┼──► Front Right Motor
+                  │   │               │  V+ ───────────────┼──► Battery + (24V)
+                  │   │               │  GND ──────────────┼──► Battery -
+                  │   │               └─────────────────────┘
+                  │   │
+                  │   │               MDDS30 Driver #2 (Rear)
+                  │   │               ┌─────────────────────┐
+                  │   │               │                     │
+                  │   └───────────────┼── IN1 (Throttle)   │  [Parallel]
+                  │                   │                     │
+                  └───────────────────┼── IN2 (Steering)   │  [Parallel]
+                                      │                     │
+              GND ────────────────────┼── GND              │
+                                      │                     │
+                                      │  M1+/- ────────────┼──► Rear Left Motor
+                                      │  M2+/- ────────────┼──► Rear Right Motor
+                                      │  V+ ───────────────┼──► Battery + (24V)
+                                      │  GND ──────────────┼──► Battery -
+                                      └─────────────────────┘
 ```
+
+### PWM Signal Specifications
+
+The MDDS30 in Mixed R/C mode expects standard **RC servo PWM signals**:
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| **Frequency** | 50 Hz | 20ms period (standard RC) |
+| **Pulse Width Range** | 1000-2000 μs | Full range |
+| **Neutral/Stop** | 1500 μs | Motors stopped |
+| **Full Forward** | 1700-2000 μs | Max forward speed |
+| **Full Reverse** | 1000-1300 μs | Max reverse speed |
+| **Dead Band** | ±50 μs around 1500 μs | Configurable on MDDS30 |
+
+### STM32 Timer Configuration
+
+For generating 50Hz RC PWM on TIM1:
+
+```c
+// Timer settings for 50Hz PWM (20ms period)
+// Assuming 180MHz system clock with APB2 timer clock = 180MHz
+
+#define PWM_FREQUENCY     50      // Hz
+#define PWM_PERIOD_US     20000   // microseconds
+#define TIMER_PRESCALER   180     // 180MHz / 180 = 1MHz timer clock
+#define TIMER_PERIOD      20000   // 1MHz / 20000 = 50Hz
+
+// PWM pulse width values (in timer counts = microseconds)
+#define PWM_NEUTRAL       1500    // Stop
+#define PWM_MAX_FORWARD   1700    // Full forward (conservative)
+#define PWM_MAX_REVERSE   1300    // Full reverse (conservative)
+#define PWM_ABSOLUTE_MAX  2000    // Hardware limit
+#define PWM_ABSOLUTE_MIN  1000    // Hardware limit
+```
+
+### Complete Wiring Summary
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                          COMPLETE WIRING DIAGRAM                                  │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                   │
+│  ┌──────────────┐      USB        ┌──────────────┐                               │
+│  │ Jetson Orin  │◄───────────────►│ USB-to-CAN   │                               │
+│  │    Nano      │                 │   Adapter    │                               │
+│  └──────────────┘                 └──────┬───────┘                               │
+│                                          │ CAN_H, CAN_L                          │
+│                                          │                                        │
+│                              ┌───────────┴───────────┐                           │
+│                              │  Seeed MCP2515 Module │                           │
+│                              │  (SN65HVD230)         │                           │
+│                              │                       │                           │
+│                              │  CAN_H ◄──────────────┼─── CAN Bus                │
+│                              │  CAN_L ◄──────────────┼─── CAN Bus                │
+│                              │                       │                           │
+│                              │  SCK ─────────────────┼─── PA5 (D13)              │
+│                              │  SO ──────────────────┼─── PA6 (D12)              │
+│                              │  SI ──────────────────┼─── PA7 (D11)              │
+│                              │  CS ──────────────────┼─── PB6 (D10)              │
+│                              │  INT ─────────────────┼─── PB5 (D4)               │
+│                              │  VCC ─────────────────┼─── 3.3V                   │
+│                              │  GND ─────────────────┼─── GND                    │
+│                              └───────────────────────┘                           │
+│                                          │                                        │
+│                                   ┌──────┴───────┐                               │
+│                                   │ NUCLEO-F446RE│                               │
+│                                   │              │                               │
+│                                   │  SPI1 (CAN)  │                               │
+│                                   │  PA5 = SCK   │                               │
+│                                   │  PA6 = MISO  │                               │
+│                                   │  PA7 = MOSI  │                               │
+│                                   │  PB6 = CS    │                               │
+│                                   │  PB5 = INT   │                               │
+│                                   │              │                               │
+│                                   │  PA8 ─► PWM1 ┼──┬──► MDDS30 #1 IN1          │
+│                                   │  PA9 ─► PWM2 ┼──┼──► MDDS30 #1 IN2          │
+│                                   │              │  │                            │
+│                                   │  GND ────────┼──┼──► MDDS30 #1 GND          │
+│                                   │              │  │                            │
+│                                   │  PC13 = BTN  │  ├──► MDDS30 #2 IN1          │
+│                                   │              │  └──► MDDS30 #2 IN2          │
+│                                   └──────────────┘                               │
+│                                                                                   │
+│  MDDS30 #1 (Front)              MDDS30 #2 (Rear)                                 │
+│  ┌────────────────┐             ┌────────────────┐                               │
+│  │ M1+ ──► FL Motor             │ M1+ ──► RL Motor                               │
+│  │ M1- ──► FL Motor             │ M1- ──► RL Motor                               │
+│  │ M2+ ──► FR Motor             │ M2+ ──► RR Motor                               │
+│  │ M2- ──► FR Motor             │ M2- ──► RR Motor                               │
+│  │ V+  ◄── Battery 24V          │ V+  ◄── Battery 24V                            │
+│  │ GND ◄── Battery GND          │ GND ◄── Battery GND                            │
+│  └────────────────┘             └────────────────┘                               │
+│                                                                                   │
+│  FL = Front Left, FR = Front Right, RL = Rear Left, RR = Rear Right              │
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Pin Quick Reference Table
+
+| Connection | Arduino Pin | Connector | STM32 Pin | Wire Color (suggested) |
+|------------|-------------|-----------|-----------|------------------------|
+| **PWM (to MDDS30)** |
+| PWM Throttle → MDDS30 IN1 | D7 | CN9-8 | PA8 | Yellow |
+| PWM Steering → MDDS30 IN2 | D8 | CN5-1 | PA9 | Orange |
+| **SPI (to MCP2515 CAN Module)** |
+| SPI SCK → MCP2515 SCK | D13 | CN5-6 | PA5 | White |
+| SPI MISO → MCP2515 SO | D12 | CN5-5 | PA6 | Gray |
+| SPI MOSI → MCP2515 SI | D11 | CN5-4 | PA7 | Purple |
+| SPI CS → MCP2515 CS | D10 | CN5-3 | PB6 | Blue |
+| INT → MCP2515 INT | D4 | CN9-6 | PB5 | Green |
+| **Power (to MCP2515 CAN Module)** |
+| 3.3V → MCP2515 VCC | - | CN6-4 (near USB) | 3V3 | Red |
+| GND → All devices | - | CN6-6 or CN5-7 | GND | Black |
+| **Optional** |
+| Kill Switch Input | A5 | CN7-38 | PC0 | Brown |
+
+### MDDS30 DIP Switch Settings (Mixed R/C Mode)
+
+Set the MDDS30 DIP switches for **Mixed R/C mode**:
+
+| Switch | Position | Function |
+|--------|----------|----------|
+| SW1 | OFF | - |
+| SW2 | ON | Mixed mode |
+| SW3 | OFF | R/C input |
+| SW4 | OFF | - |
+
+Refer to [MDDS30 datasheet](https://www.cytron.io/p-30amp-7v-30v-dc-motor-driver) for exact switch positions.
 
 ## References
 

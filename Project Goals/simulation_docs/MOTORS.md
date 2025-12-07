@@ -397,38 +397,122 @@ And in `jetson_rover_gazebo.xacro`:
 - **Energy optimization:** Variable speed based on terrain
 - **Regenerative braking:** If controllers support it
 
-## Motor Driver Pinout (MDDS30)
+## NUCLEO-F446RE to MDDS30 Pin Definitions
 
-### Connections (Typical)
+### Pin Assignments
+
+#### PWM Outputs (to MDDS30 Drivers)
+
+| Function | STM32 Pin | Nucleo Pin | Arduino Pin | Timer | Notes |
+|----------|-----------|------------|-------------|-------|-------|
+| **PWM Throttle** | PA8 | CN9-8 | D7 | TIM1_CH1 | Forward/backward control |
+| **PWM Steering** | PA9 | CN5-1 | D8 | TIM1_CH2 | Left/right differential |
+
+#### CAN Bus (Seeed Studio MCP2515/SN65HVD230 Module via SPI)
+
+The MCP2515 CAN controller communicates via **SPI**, not the STM32's native CAN pins.
+
+| Function | STM32 Pin | Connector | Arduino Pin | MCP2515 Pin | Notes |
+|----------|-----------|-----------|-------------|-------------|-------|
+| **SPI1_SCK** | PA5 | CN5-6 | D13 | SCK | SPI Clock |
+| **SPI1_MISO** | PA6 | CN5-5 | D12 | SO (MISO) | SPI Data Out |
+| **SPI1_MOSI** | PA7 | CN5-4 | D11 | SI (MOSI) | SPI Data In |
+| **SPI1_CS** | PB6 | CN5-3 | D10 | CS | Chip Select |
+| **INT** | PB5 | CN9-6 | D4 | INT | Interrupt (active low) |
+
+**Point-to-Point Wiring (NUCLEO → Seeed Module):**
+
+| NUCLEO Pin | Connector-Pin | Wire | Seeed Module Pin | Function |
+|------------|---------------|------|------------------|----------|
+| D13 | CN5-6 | White | SCK | SPI Clock |
+| D12 | CN5-5 | Gray | SO (MISO) | Data from module |
+| D11 | CN5-4 | Purple | SI (MOSI) | Data to module |
+| D10 | CN5-3 | Blue | CS | Chip Select |
+| D4 | CN9-6 | Green | INT | Interrupt |
+| 3V3 | CN6-4 | Red | VCC | 3.3V Power |
+| GND | CN6-6 | Black | GND | Ground |
+
+**Connector Notes:**
+- **CN5** - 6-pin Arduino SPI header (directly above CN9)
+- **CN6** - 6-pin power header (near USB connector)
+- **CN9** - 8-pin Arduino digital header (D0-D7)
+
+### MDDS30 Wiring (Mixed R/C Mode)
+
+The MDDS30 operates in **Mixed R/C mode** where:
+- **Channel 1 (IN1):** Throttle - controls forward/backward for both motors
+- **Channel 2 (IN2):** Steering - controls differential (left/right speed difference)
 
 ```
-MDDS30 Driver #1 (Front Wheels):
-  PWM1  → Cube Orange PWM output (left front)
-  PWM2  → Cube Orange PWM output (right front)
-  GND   → Common ground
-  VCC   → 5V logic supply
-  V+    → Battery + (24V)
-  M1+/- → Front left motor
-  M2+/- → Front right motor
-
-MDDS30 Driver #2 (Rear Wheels):
-  PWM1  → Cube Orange PWM output (left rear)
-  PWM2  → Cube Orange PWM output (right rear)
-  GND   → Common ground
-  VCC   → 5V logic supply
-  V+    → Battery + (24V)
-  M1+/- → Rear left motor
-  M2+/- → Rear right motor
+NUCLEO-F446RE                         MDDS30 Driver #1 (Front)
+┌─────────────┐                       ┌─────────────────────┐
+│             │                       │                     │
+│  PA8 (D7) ──┼───────┬───────────────┼── IN1 (Throttle)   │
+│             │       │               │                     │
+│  PA9 (D8) ──┼───┬───┼───────────────┼── IN2 (Steering)   │
+│             │   │   │               │                     │
+│  GND ───────┼───┼───┼───────────────┼── GND              │
+│             │   │   │               │                     │
+└─────────────┘   │   │               │  M1+/- ────────────┼──► Front Left Motor
+                  │   │               │  M2+/- ────────────┼──► Front Right Motor
+                  │   │               │  V+ ───────────────┼──► Battery + (24V)
+                  │   │               │  GND ──────────────┼──► Battery -
+                  │   │               └─────────────────────┘
+                  │   │
+                  │   │               MDDS30 Driver #2 (Rear)
+                  │   │               ┌─────────────────────┐
+                  │   │               │                     │
+                  │   └───────────────┼── IN1 (Throttle)   │  [Parallel]
+                  │                   │                     │
+                  └───────────────────┼── IN2 (Steering)   │  [Parallel]
+                                      │                     │
+              GND ────────────────────┼── GND              │
+                                      │                     │
+                                      │  M1+/- ────────────┼──► Rear Left Motor
+                                      │  M2+/- ────────────┼──► Rear Right Motor
+                                      │  V+ ───────────────┼──► Battery + (24V)
+                                      │  GND ──────────────┼──► Battery -
+                                      └─────────────────────┘
 ```
+
+### PWM Signal Specifications
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| **Frequency** | 50 Hz | 20ms period (standard RC) |
+| **Neutral/Stop** | 1500 μs | Motors stopped |
+| **Full Forward** | 1700-2000 μs | Max forward speed |
+| **Full Reverse** | 1000-1300 μs | Max reverse speed |
+
+### Pin Quick Reference Table
+
+| Connection | Arduino Pin | Connector | STM32 Pin | Wire Color (suggested) |
+|------------|-------------|-----------|-----------|------------------------|
+| **PWM (to MDDS30)** |
+| PWM Throttle → MDDS30 IN1 | D7 | CN9-8 | PA8 | Yellow |
+| PWM Steering → MDDS30 IN2 | D8 | CN5-1 | PA9 | Orange |
+| **SPI (to MCP2515 CAN Module)** |
+| SPI SCK → MCP2515 SCK | D13 | CN5-6 | PA5 | White |
+| SPI MISO → MCP2515 SO | D12 | CN5-5 | PA6 | Gray |
+| SPI MOSI → MCP2515 SI | D11 | CN5-4 | PA7 | Purple |
+| SPI CS → MCP2515 CS | D10 | CN5-3 | PB6 | Blue |
+| INT → MCP2515 INT | D4 | CN9-6 | PB5 | Green |
+| **Power** |
+| 3.3V → MCP2515 VCC | - | CN6-4 or CN7-12/16 | - | Red |
+| GND → All devices | - | CN6-6/7 | - | Black |
+
+See [ros2_ws/src/energia_sim/MOTORS.md](../../ros2_ws/src/energia_sim/MOTORS.md) for complete wiring diagrams and timer configuration.
 
 ## References
 
 - **MDDS30 Datasheet:** https://www.cytron.io/p-30amp-7v-30v-dc-motor-driver
+- **NUCLEO-F446RE User Manual:** https://www.st.com/resource/en/user_manual/um1724-stm32-nucleo64-boards-mb1136-stmicroelectronics.pdf
 - **ROS 2 Differential Drive Plugin:** http://wiki.ros.org/diff_drive_controller
 - **Gazebo Motor Plugin:** http://gazebosim.org/tutorials?tut=ros_gzplugins
 
 ---
 
 **Created:** November 8, 2025
-**Status:** Simulation configured with estimated parameters
-**Next Step:** Measure actual motor specs and update simulation for accuracy
+**Updated:** December 2025 - Added NUCLEO-F446RE pin definitions
+**Status:** Hardware pin definitions complete
+**Next Step:** Write STM32 firmware for CAN receive and PWM generation
