@@ -43,6 +43,10 @@ setup(
             'wander_behavior = energia_bridge.wander_behavior:main',
             'exploration_behavior = energia_bridge.exploration_behavior:main',
             'motion_smoother = energia_bridge.motion_smoother:main',
+            'mqtt_ros2_bridge = energia_bridge.mqtt_ros2_bridge:main',
+            'gps_waypoint_navigator = energia_bridge.gps_waypoint_navigator:main',
+            'waypoint_visualizer = energia_bridge.waypoint_visualizer:main',
+            'odom_to_tf = energia_bridge.odom_to_tf:main',
         ],
     },
 )

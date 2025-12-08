@@ -11,6 +11,7 @@ Launches the Energia Rover simulation with:
 Usage:
     ros2 launch energia_sim full_simulation.launch.py
     ros2 launch energia_sim full_simulation.launch.py world:=maze
+    ros2 launch energia_sim full_simulation.launch.py world:=satellite_portland
 
 Notes on timing:
     This launch file uses simulation time (use_sim_time=true) with the /clock
@@ -26,8 +27,9 @@ from launch.actions import (
     ExecuteProcess,
     SetEnvironmentVariable,
     TimerAction,
+    OpaqueFunction,
 )
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 import xacro
@@ -41,21 +43,24 @@ def generate_launch_description():
 
     # Paths
     urdf_file = os.path.join(pkg_share, 'urdf', 'energia_rover_v2.urdf.xacro')
-    world_path = os.path.join(pkg_share, 'worlds', 'test_yard.world')
+    worlds_dir = os.path.join(pkg_share, 'worlds')
 
     # RViz config
     rviz_config_file = os.path.join(pkg_share, 'config', 'rover_visualization.rviz')
 
-    # Set Gazebo resource path for models
+    # Set Gazebo resource path for models and textures
     models_path = os.path.join(pkg_share, 'models')
     gz_resource_path = os.environ.get('GZ_SIM_RESOURCE_PATH', '')
+    # Add both models path and package share (for textures directory)
+    paths_to_add = [models_path, pkg_share]
     if gz_resource_path:
-        gz_resource_path = models_path + ':' + gz_resource_path
+        gz_resource_path = ':'.join(paths_to_add) + ':' + gz_resource_path
     else:
-        gz_resource_path = models_path
+        gz_resource_path = ':'.join(paths_to_add)
 
     # Launch configuration variables
     use_sim_time = LaunchConfiguration('use_sim_time')
+    world_name = LaunchConfiguration('world')
     x_pose = LaunchConfiguration('x_pose')
     y_pose = LaunchConfiguration('y_pose')
     z_pose = LaunchConfiguration('z_pose')
@@ -65,6 +70,12 @@ def generate_launch_description():
         'use_sim_time',
         default_value='true',
         description='Use simulation (Gazebo) clock if true'
+    )
+
+    declare_world = DeclareLaunchArgument(
+        'world',
+        default_value='test_yard',
+        description='World to load (test_yard, maze, satellite_portland)'
     )
 
     declare_x_pose = DeclareLaunchArgument(
@@ -93,11 +104,16 @@ def generate_launch_description():
 
     # ==================== Gazebo Harmonic ====================
 
-    # Start Gazebo Harmonic with the world file
-    start_gazebo = ExecuteProcess(
-        cmd=['gz', 'sim', '-r', world_path],
-        output='screen'
-    )
+    # Function to launch Gazebo with the selected world
+    def launch_gazebo(context):
+        world = context.launch_configurations['world']
+        world_path = os.path.join(worlds_dir, f'{world}.world')
+        return [ExecuteProcess(
+            cmd=['gz', 'sim', '-r', world_path],
+            output='screen'
+        )]
+
+    start_gazebo = OpaqueFunction(function=launch_gazebo)
 
     # ==================== ROS-Gazebo Bridge ====================
 
@@ -224,6 +240,7 @@ def generate_launch_description():
 
     # Declare launch options
     ld.add_action(declare_use_sim_time)
+    ld.add_action(declare_world)
     ld.add_action(declare_x_pose)
     ld.add_action(declare_y_pose)
     ld.add_action(declare_z_pose)

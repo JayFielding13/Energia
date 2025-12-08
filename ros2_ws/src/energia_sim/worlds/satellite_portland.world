@@ -1,0 +1,319 @@
+<?xml version="1.0" ?>
+<!--
+  Satellite Portland World for Gazebo Harmonic
+
+  This world uses satellite imagery centered on the RTK base station location
+  at 45.4295°N, -122.8398°W (Portland, OR area).
+
+  Ground plane covers approximately 200m x 200m with ~0.42m/pixel resolution.
+  The origin (0,0) corresponds to the RTK base station location.
+
+  Satellite imagery source: Esri World Imagery
+  Attribution: Esri, Maxar, Earthstar Geographics, and the GIS User Community
+-->
+<sdf version="1.9">
+  <world name="satellite_portland">
+
+    <!-- Physics -->
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+    </physics>
+
+    <!-- Gazebo Harmonic plugins -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
+
+    <!-- Lighting - simulate outdoor conditions -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 100 0 0 0</pose>
+      <diffuse>0.9 0.9 0.85 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <!-- Sun angle for Portland, OR latitude -->
+      <direction>-0.4 0.2 -0.9</direction>
+    </light>
+
+    <!-- Ambient light for outdoor scene -->
+    <light type="directional" name="ambient">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 50 0 0 0</pose>
+      <diffuse>0.3 0.3 0.35 1</diffuse>
+      <specular>0 0 0 1</specular>
+      <direction>0 0 -1</direction>
+    </light>
+
+    <!-- Ground plane with satellite imagery texture -->
+    <model name="satellite_ground">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>200 200</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.8</mu>
+                <mu2>0.8</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <cast_shadows>false</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>200 200</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+            <!-- Texture path: relative to world file location, go up one level to share dir -->
+            <pbr>
+              <metal>
+                <albedo_map>../textures/satellite_portland.jpg</albedo_map>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- RTK Base Station marker at origin -->
+    <model name="base_station_marker">
+      <pose>0 0 0.01 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <!-- Circular base plate -->
+        <visual name="base_visual">
+          <geometry>
+            <cylinder>
+              <radius>1.0</radius>
+              <length>0.02</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 0.5 1 0.7</ambient>
+            <diffuse>0 0.5 1 0.7</diffuse>
+          </material>
+        </visual>
+        <!-- Center post -->
+        <visual name="post_visual">
+          <pose>0 0 0.5 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.05</radius>
+              <length>1.0</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <!-- GPS antenna sphere -->
+        <visual name="antenna_visual">
+          <pose>0 0 1.1 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.15</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.9 0.9 0.9 1</ambient>
+            <diffuse>0.9 0.9 0.9 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Compass rose / orientation marker -->
+    <model name="compass_north">
+      <pose>0 10 0.05 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.5 1.5 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0 0 0.8</ambient>
+            <diffuse>1 0 0 0.8</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Scale reference markers (every 20 meters) -->
+    <model name="scale_20m_east">
+      <pose>20 0 0.02 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>0.04</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 1 0 0.7</ambient>
+            <diffuse>1 1 0 0.7</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="scale_40m_east">
+      <pose>40 0 0.02 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>0.04</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 1 0 0.7</ambient>
+            <diffuse>1 1 0 0.7</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="scale_20m_north">
+      <pose>0 20 0.02 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>0.04</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 1 0 0.7</ambient>
+            <diffuse>0 1 0 0.7</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="scale_40m_north">
+      <pose>0 40 0.02 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>0.04</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0 1 0 0.7</ambient>
+            <diffuse>0 1 0 0.7</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Boundary markers (edge of satellite imagery) -->
+    <model name="boundary_ne">
+      <pose>95 95 0.25 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <sphere>
+              <radius>0.5</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1 0.5 0 0.7</ambient>
+            <diffuse>1 0.5 0 0.7</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="boundary_nw">
+      <pose>-95 95 0.25 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <sphere>
+              <radius>0.5</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1 0.5 0 0.7</ambient>
+            <diffuse>1 0.5 0 0.7</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="boundary_se">
+      <pose>95 -95 0.25 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <sphere>
+              <radius>0.5</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1 0.5 0 0.7</ambient>
+            <diffuse>1 0.5 0 0.7</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="boundary_sw">
+      <pose>-95 -95 0.25 0 0 0</pose>
+      <static>true</static>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <sphere>
+              <radius>0.5</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>1 0.5 0 0.7</ambient>
+            <diffuse>1 0.5 0 0.7</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

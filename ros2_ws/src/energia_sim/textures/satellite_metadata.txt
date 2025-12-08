@@ -1,0 +1,9 @@
+Center Latitude: 45.4295073
+Center Longitude: -122.8397916
+Size (meters): 200
+Zoom Level: 18
+Resolution (m/pixel): 0.4191
+Image Size (pixels): 477x477
+Actual Coverage (meters): 199.9x199.9
+Source: Esri World Imagery
+Attribution: Esri, Maxar, Earthstar Geographics, and the GIS User Community

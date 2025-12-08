@@ -1,0 +1,74 @@
+# RTK Navigation Configuration for Energia Rover
+# Configuration for MQTT-ROS2 bridge and GPS waypoint navigation
+
+mqtt_ros2_bridge:
+  ros__parameters:
+    # MQTT Broker Configuration
+    # Use Tailscale IP for remote access, or home IP for local network
+    mqtt_broker: "100.66.67.11"  # rtkpi Tailscale IP
+    # mqtt_broker: "192.168.254.165"  # rtkpi home network IP
+    mqtt_port: 1883
+
+    # GPS Base Station Location (Portland, OR)
+    # This is used as the origin for local coordinate conversion
+    # Coordinates from RTK_BASE_REFERENCE.md: 45 deg 25.82' N, 122 deg 50.46' W
+    base_latitude: 45.4303333
+    base_longitude: -122.8410
+
+    # Robot identifier for MQTT topics
+    robot_name: "baby-tessla"
+
+gps_waypoint_navigator:
+  ros__parameters:
+    # Navigation mode
+    # Set to true to use Nav2 action server for path planning
+    # Set to false to use simple proportional control
+    use_nav2: false
+
+    # Goal tolerance in meters
+    # Robot stops when within this distance of waypoint
+    goal_tolerance: 0.5
+
+    # Speed limits
+    max_linear_speed: 0.5   # m/s
+    max_angular_speed: 1.0  # rad/s
+
+    # Proportional controller gains
+    linear_gain: 0.5   # Higher = faster approach
+    angular_gain: 2.0  # Higher = faster turning
+
+# Network Reference (from VPN Configuration):
+# ============================================
+# RTK Base Station (rtkpi):
+#   Tailscale IP: 100.66.67.11
+#   Home IP: 192.168.254.165
+#   MQTT Broker: port 1883
+#
+# Mobile RTK Terminal (beaconpi):
+#   Tailscale IP: 100.73.233.124
+#   Home IP: 192.168.254.127
+#
+# Jetson Orin Nano (jetson1):
+#   Tailscale IP: 100.91.191.47
+#   Home IP: 192.168.254.100
+#
+# Ubuntu Desktop (jay-desktop):
+#   Tailscale IP: 100.73.129.15
+#   Home IP: 192.168.254.66
+
+# MQTT Topics Reference:
+# ======================
+# From Base Station:
+#   rtk/base/corrections - Binary RTCM3 corrections
+#   rtk/base/status - Base station status
+#
+# From Mobile RTK Terminal:
+#   beacon/terminal/position - GPS position (lat, lon, heading)
+#
+# Robot Commands:
+#   robot/baby-tessla/command/waypoint - Waypoint commands
+#   robot/baby-tessla/command/mode - Mode commands
+#
+# Robot Status:
+#   robot/baby-tessla/status/position - Current position
+#   robot/baby-tessla/status/mode - Current mode
